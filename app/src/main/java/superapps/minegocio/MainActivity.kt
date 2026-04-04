@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,18 +21,29 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import superapps.minegocio.navigation.HomeNavRoutes
+import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
@@ -70,6 +82,43 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApplicationApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    val authViewModel: AuthViewModel = viewModel()
+    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val webClientId = context.getString(R.string.default_web_client_id)
+    val hasValidWebClientId = webClientId.isNotBlank() && webClientId != "default_web_client_id"
+    val googleSignInClient = remember(webClientId) {
+        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+        GoogleSignIn.getClient(context, options)
+    }
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { activityResult ->
+        val result = GoogleSignIn.getSignedInAccountFromIntent(activityResult.data)
+        runCatching {
+            result.getResult(ApiException::class.java)
+        }.onSuccess { account ->
+            val idToken = account.idToken
+            if (idToken.isNullOrBlank()) {
+                authViewModel.setError(context.getString(R.string.auth_google_missing_id_token))
+            } else {
+                authViewModel.signInWithGoogleIdToken(idToken)
+            }
+        }.onFailure { error ->
+            if (error is ApiException && error.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                authViewModel.clearError()
+                return@onFailure
+            }
+            authViewModel.setError(context.getString(R.string.auth_google_sign_in_failed))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        authViewModel.bootstrapAnonymousSession()
+    }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -100,6 +149,16 @@ fun MyApplicationApp() {
                     ) {
                         composable(HomeNavRoutes.HOME) {
                             HomeScreen(
+                                authUiState = authUiState,
+                                onSignInWithGoogle = {
+                                    if (!hasValidWebClientId) {
+                                        authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
+                                    } else {
+                                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                    }
+                                },
+                                onSignOut = { authViewModel.signOutAndContinueAnonymously() },
+                                onDismissAuthError = { authViewModel.clearError() },
                                 onOpenCategories = {
                                     navController.navigate(HomeNavRoutes.CATEGORIES)
                                 },
@@ -132,10 +191,15 @@ enum class AppDestinations(
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
+    androidx.compose.foundation.layout.Box(
         modifier = modifier
-    )
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "Hello $name!",
+        )
+    }
 }
 
 @Preview(showBackground = true)

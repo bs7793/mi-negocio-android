@@ -1,4 +1,4 @@
-package superapps.minegocio.data
+package superapps.minegocio.ui.categoriesscreen
 
 import kotlinx.serialization.Serializable
 

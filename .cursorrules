@@ -1,0 +1,7 @@
+# Mi Negocio Android — convenciones
+
+## Pantallas autocontenidas
+
+- Cada pantalla/feature vive bajo `app/src/main/java/.../ui/<nombre>/` con **paquete en minúsculas** (p. ej. `superapps.minegocio.ui.categoriesscreen`).
+- En esa carpeta va **todo lo específico** de la pantalla: modelo, acceso a datos (o mini-repositorio), cliente Supabase cuando la pantalla lo necesite (provider singleton + `BuildConfig`), ViewModel y composables.
+- Navegación: rutas en un solo sitio (p. ej. objeto `*NavRoutes`); textos de UI en `strings.xml`; accesibilidad (`contentDescription`) en iconos y acciones relevantes.

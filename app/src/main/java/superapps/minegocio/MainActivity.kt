@@ -23,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import superapps.minegocio.navigation.HomeNavRoutes
+import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
 
@@ -63,7 +68,27 @@ fun MyApplicationApp() {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             val contentModifier = Modifier.padding(innerPadding)
             when (currentDestination) {
-                AppDestinations.HOME -> HomeScreen(modifier = contentModifier)
+                AppDestinations.HOME -> {
+                    val navController = rememberNavController()
+                    NavHost(
+                        navController = navController,
+                        startDestination = HomeNavRoutes.HOME,
+                        modifier = contentModifier,
+                    ) {
+                        composable(HomeNavRoutes.HOME) {
+                            HomeScreen(
+                                onOpenCategories = {
+                                    navController.navigate(HomeNavRoutes.CATEGORIES)
+                                },
+                            )
+                        }
+                        composable(HomeNavRoutes.CATEGORIES) {
+                            CategoriesScreen(
+                                onNavigateUp = { navController.popBackStack() },
+                            )
+                        }
+                    }
+                }
                 else -> Greeting(
                     name = "Android",
                     modifier = contentModifier,

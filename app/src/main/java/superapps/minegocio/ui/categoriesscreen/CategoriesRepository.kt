@@ -1,4 +1,4 @@
-package superapps.minegocio.data
+package superapps.minegocio.ui.categoriesscreen
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from

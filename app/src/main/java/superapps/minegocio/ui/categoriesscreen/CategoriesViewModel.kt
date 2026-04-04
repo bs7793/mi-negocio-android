@@ -1,4 +1,4 @@
-package superapps.minegocio.ui.home
+package superapps.minegocio.ui.categoriesscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,21 +7,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import superapps.minegocio.data.CategoriesRepository
-import superapps.minegocio.data.Category
 
-data class HomeUiState(
+data class CategoriesUiState(
     val isLoading: Boolean = true,
     val categories: List<Category> = emptyList(),
     val errorMessage: String? = null,
 )
 
-class HomeViewModel(
+class CategoriesViewModel(
     private val repository: CategoriesRepository = CategoriesRepository(),
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(CategoriesUiState())
+    val uiState: StateFlow<CategoriesUiState> = _uiState.asStateFlow()
 
     init {
         load()

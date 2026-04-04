@@ -1,5 +1,10 @@
 # Mi Negocio Android — convenciones
 
+## Idioma del proyecto
+
+- **Código**: identificadores, comentarios y documentación técnica en **inglés**.
+- **UI por defecto**: los recursos base en `res/values/strings.xml` están en **inglés**; añade traducciones en `values-<locale>/` (p. ej. `values-es`, `values-pt`).
+
 ## Pantallas autocontenidas
 
 - Cada pantalla/feature vive bajo `app/src/main/java/.../ui/<nombre>/` con **paquete en minúsculas** (p. ej. `superapps.minegocio.ui.categoriesscreen`).

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Meu Negócio</string>
+    <string name="home_title">Início</string>
+    <string name="home_open_categories">Categorias</string>
+    <string name="categories_screen_title">Categorias</string>
+    <string name="cd_navigate_up">Navegar para cima</string>
+</resources>

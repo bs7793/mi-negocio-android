@@ -1,69 +1,81 @@
 package superapps.minegocio.ui.auth
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.android.gms.tasks.Task
-import kotlinx.coroutines.channels.awaitClose
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.buildJsonObject
+import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
 
 class AuthSessionManager(
-    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val supabase: SupabaseClient = SupabaseProvider.client,
 ) {
-    fun observeAuthState(): Flow<FirebaseUser?> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser)
+    fun observeAuthState(): Flow<SupabaseAuthUser?> = flow {
+        emit(currentUserOrNull())
+        supabase.auth.sessionStatus.collect {
+            emit(currentUserOrNull())
         }
-        firebaseAuth.addAuthStateListener(listener)
-        trySend(firebaseAuth.currentUser)
-        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }
 
     suspend fun ensureAnonymousSession() {
-        if (firebaseAuth.currentUser == null) {
-            firebaseAuth.signInAnonymously().awaitResult()
+        if (supabase.auth.currentSessionOrNull() == null) {
+            supabase.auth.signInAnonymously(data = buildJsonObject { })
         }
     }
 
     suspend fun signInWithGoogleIdToken(idToken: String) {
         require(idToken.isNotBlank()) { "Google ID token is required" }
-
-        val credential = GoogleAuthProvider.getCredential(idToken, null)
-        val currentUser = firebaseAuth.currentUser
-
-        if (currentUser?.isAnonymous == true) {
-            try {
-                currentUser.linkWithCredential(credential).awaitResult()
-                return
-            } catch (_: FirebaseAuthUserCollisionException) {
-                // The credential already belongs to an existing account.
-                // Sign into that account instead of failing the flow.
+        val user = supabase.auth.currentUserOrNull()
+        if (user != null && user.isAnonymousSupabaseUser()) {
+            supabase.auth.linkIdentityWithIdToken(Google, idToken) { }
+        } else {
+            supabase.auth.signInWith(IDToken) {
+                provider = Google
+                this.idToken = idToken
             }
         }
-
-        firebaseAuth.signInWithCredential(credential).awaitResult()
     }
 
     suspend fun signOutAndRecreateAnonymous() {
-        firebaseAuth.signOut()
+        supabase.auth.signOut()
         ensureAnonymousSession()
+    }
+
+    suspend fun getSupabaseAccessToken(forceRefresh: Boolean = false): String {
+        if (forceRefresh) {
+            supabase.auth.refreshCurrentSession()
+        }
+        val session = supabase.auth.currentSessionOrNull()
+            ?: throw IllegalStateException("No active Supabase session")
+        return session.accessToken
+    }
+
+    fun currentUserIdOrNull(): String? = supabase.auth.currentUserOrNull()?.id
+
+    private suspend fun currentUserOrNull(): SupabaseAuthUser? {
+        val user = supabase.auth.currentUserOrNull() ?: return null
+        return SupabaseAuthUser(
+            id = user.id,
+            email = user.email,
+            displayName = user.userMetadata?.get("full_name")?.toString(),
+            isAnonymous = user.isAnonymousSupabaseUser(),
+        )
     }
 }
 
-private suspend fun <T> Task<T>.awaitResult(): T = suspendCancellableCoroutine { continuation ->
-    addOnSuccessListener { result ->
-        if (continuation.isActive) {
-            continuation.resume(result)
-        }
+private fun UserInfo.isAnonymousSupabaseUser(): Boolean {
+    if (appMetadata?.get("is_anonymous")?.toString()?.toBoolean() == true) {
+        return true
     }
-    addOnFailureListener { error ->
-        if (continuation.isActive) {
-            continuation.resumeWithException(error)
-        }
-    }
+    return identities?.any { identity -> identity.provider == "anonymous" } == true
 }
+
+data class SupabaseAuthUser(
+    val id: String,
+    val email: String?,
+    val displayName: String?,
+    val isAnonymous: Boolean,
+)

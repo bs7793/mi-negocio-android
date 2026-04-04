@@ -2,11 +2,6 @@ package superapps.minegocio.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,7 +80,7 @@ class AuthViewModel(
     }
 }
 
-private fun FirebaseUser?.toUiState(
+private fun SupabaseAuthUser?.toUiState(
     loading: Boolean,
     errorMessage: String?,
 ): AuthUiState {
@@ -98,7 +93,7 @@ private fun FirebaseUser?.toUiState(
     return AuthUiState(
         isLoading = loading,
         isAnonymous = isAnonymous,
-        uid = uid,
+        uid = id,
         email = email,
         displayName = displayName,
         errorMessage = errorMessage,
@@ -106,17 +101,13 @@ private fun FirebaseUser?.toUiState(
 }
 
 private fun Throwable.toAuthMessage(defaultMessage: String): String {
-    return when (this) {
-        is FirebaseNetworkException -> "No network connection. Please try again."
-        is FirebaseAuthInvalidCredentialsException -> "Invalid sign-in credentials."
-        is FirebaseAuthInvalidUserException -> "The account is not available."
-        is FirebaseAuthException -> {
-            if (errorCode == "ERROR_TOO_MANY_REQUESTS") {
-                "Too many attempts. Please try again later."
-            } else {
-                message ?: defaultMessage
-            }
-        }
+    val rawMessage = message?.lowercase().orEmpty()
+    return when {
+        rawMessage.contains("network") -> "No network connection. Please try again."
+        rawMessage.contains("invalid") -> "Invalid sign-in credentials."
+        rawMessage.contains("rate") || rawMessage.contains("too many") ->
+            "Too many attempts. Please try again later."
+        rawMessage.isNotBlank() -> message ?: defaultMessage
         else -> defaultMessage
     }
 }

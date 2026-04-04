@@ -13,7 +13,11 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
-
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
+val supabaseFunctionsUrl = localProperties.getProperty(
+    "SUPABASE_FUNCTIONS_URL",
+    if (supabaseUrl.isNotBlank()) "$supabaseUrl/functions/v1" else "",
+)
 android {
     namespace = "superapps.minegocio"
     compileSdk {
@@ -35,12 +39,17 @@ android {
         buildConfigField(
             "String",
             "SUPABASE_URL",
-            "\"${localProperties.getProperty("SUPABASE_URL", "")}\"",
+            "\"$supabaseUrl\"",
         )
         buildConfigField(
             "String",
             "SUPABASE_ANON_KEY",
             "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\"",
+        )
+        buildConfigField(
+            "String",
+            "SUPABASE_FUNCTIONS_URL",
+            "\"$supabaseFunctionsUrl\"",
         )
     }
 
@@ -66,7 +75,6 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.auth)
     implementation(libs.firebase.crashlytics)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -76,6 +84,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.serialization.json)

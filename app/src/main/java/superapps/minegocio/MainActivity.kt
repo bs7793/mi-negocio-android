@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -60,10 +61,14 @@ fun MyApplicationApp() {
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding)
-            )
+            val contentModifier = Modifier.padding(innerPadding)
+            when (currentDestination) {
+                AppDestinations.HOME -> HomeScreen(modifier = contentModifier)
+                else -> Greeting(
+                    name = "Android",
+                    modifier = contentModifier,
+                )
+            }
         }
     }
 }

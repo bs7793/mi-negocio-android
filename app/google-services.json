@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "362949993020",
+    "project_id": "minegocio-3bc2d",
+    "storage_bucket": "minegocio-3bc2d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362949993020:android:bfb2b63bed4bee9f6dd939",
+        "android_client_info": {
+          "package_name": "superapps.minegocio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "362949993020-kkpj6sen792jh3p6t7736u2nroav0d92.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfKj0x0_q4JFDlQNEUBXbESi6TuBjAwNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "362949993020-kkpj6sen792jh3p6t7736u2nroav0d92.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

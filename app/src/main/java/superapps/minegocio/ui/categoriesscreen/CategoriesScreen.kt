@@ -4,24 +4,35 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,8 +50,26 @@ fun CategoriesScreen(
     viewModel: CategoriesViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var isCreateSheetOpen by rememberSaveable { mutableStateOf(false) }
+    var categoryName by rememberSaveable { mutableStateOf("") }
+    var categoryDescription by rememberSaveable { mutableStateOf("") }
+    var isNameTouched by rememberSaveable { mutableStateOf(false) }
+    var submitAttempted by rememberSaveable { mutableStateOf(false) }
+    val isNameInvalid = isNameTouched && categoryName.isBlank()
 
     BackHandler(onBack = onNavigateUp)
+
+    LaunchedEffect(submitAttempted, uiState.isCreatingCategory, uiState.createErrorMessage) {
+        if (submitAttempted && !uiState.isCreatingCategory) {
+            if (uiState.createErrorMessage == null) {
+                isCreateSheetOpen = false
+                categoryName = ""
+                categoryDescription = ""
+                isNameTouched = false
+            }
+            submitAttempted = false
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -56,6 +85,19 @@ fun CategoriesScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_navigate_up),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            isCreateSheetOpen = true
+                            viewModel.clearCreateError()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.cd_add_category),
                         )
                     }
                 },
@@ -105,24 +147,135 @@ fun CategoriesScreen(
                             items = uiState.categories,
                             key = { it.id },
                         ) { category ->
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = category.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                val desc = category.description
-                                if (!desc.isNullOrBlank()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
                                     Text(
-                                        text = desc,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 3,
+                                        text = category.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    val desc = category.description
+                                    if (!desc.isNullOrBlank()) {
+                                        Text(
+                                            text = desc,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isCreateSheetOpen) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    isCreateSheetOpen = false
+                    submitAttempted = false
+                    categoryName = ""
+                    categoryDescription = ""
+                    isNameTouched = false
+                    viewModel.clearCreateError()
+                },
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.categories_add_sheet_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.categories_add_sheet_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    OutlinedTextField(
+                        value = categoryName,
+                        onValueChange = {
+                            categoryName = it
+                            isNameTouched = true
+                            if (uiState.createErrorMessage != null) {
+                                viewModel.clearCreateError()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.categories_field_name)) },
+                        placeholder = { Text(stringResource(R.string.categories_field_name_placeholder)) },
+                        singleLine = true,
+                        isError = isNameInvalid,
+                    )
+                    if (isNameInvalid) {
+                        Text(
+                            text = stringResource(R.string.categories_field_name_required),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = categoryDescription,
+                        onValueChange = { categoryDescription = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.categories_field_description)) },
+                        placeholder = {
+                            Text(stringResource(R.string.categories_field_description_placeholder))
+                        },
+                        minLines = 3,
+                        maxLines = 5,
+                    )
+
+                    if (!uiState.createErrorMessage.isNullOrBlank()) {
+                        Text(
+                            text = uiState.createErrorMessage ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            submitAttempted = true
+                            isNameTouched = true
+                            viewModel.createCategory(categoryName, categoryDescription)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        enabled = !uiState.isCreatingCategory && categoryName.isNotBlank(),
+                    ) {
+                        if (uiState.isCreatingCategory) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = stringResource(R.string.categories_action_creating),
+                                )
+                            }
+                        } else {
+                            Text(text = stringResource(R.string.categories_action_add))
                         }
                     }
                 }

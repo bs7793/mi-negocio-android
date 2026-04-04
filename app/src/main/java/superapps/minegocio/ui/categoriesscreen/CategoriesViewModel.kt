@@ -12,6 +12,8 @@ data class CategoriesUiState(
     val isLoading: Boolean = true,
     val categories: List<Category> = emptyList(),
     val errorMessage: String? = null,
+    val isCreatingCategory: Boolean = false,
+    val createErrorMessage: String? = null,
 )
 
 class CategoriesViewModel(
@@ -42,5 +44,43 @@ class CategoriesViewModel(
                 }
             }
         }
+    }
+
+    fun createCategory(name: String, description: String?) {
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) {
+            _uiState.update { it.copy(createErrorMessage = null) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(isCreatingCategory = true, createErrorMessage = null)
+            }
+            try {
+                val createdCategory = repository.createCategory(
+                    name = trimmedName,
+                    description = description,
+                )
+                _uiState.update {
+                    it.copy(
+                        isCreatingCategory = false,
+                        createErrorMessage = null,
+                        categories = listOf(createdCategory) + it.categories,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isCreatingCategory = false,
+                        createErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearCreateError() {
+        _uiState.update { it.copy(createErrorMessage = null) }
     }
 }

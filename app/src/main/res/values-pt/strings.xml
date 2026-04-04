@@ -4,4 +4,14 @@
     <string name="home_open_categories">Categorias</string>
     <string name="categories_screen_title">Categorias</string>
     <string name="cd_navigate_up">Navegar para cima</string>
+    <string name="cd_add_category">Adicionar categoria</string>
+    <string name="categories_add_sheet_title">Nova categoria</string>
+    <string name="categories_add_sheet_subtitle">Organize seus produtos com uma categoria clara e descritiva.</string>
+    <string name="categories_field_name">Nome da categoria</string>
+    <string name="categories_field_name_placeholder">Digite o nome da categoria</string>
+    <string name="categories_field_name_required">O nome da categoria é obrigatório</string>
+    <string name="categories_field_description">Descrição</string>
+    <string name="categories_field_description_placeholder">Adicione uma descrição opcional</string>
+    <string name="categories_action_add">Adicionar categoria</string>
+    <string name="categories_action_creating">Criando...</string>
 </resources>

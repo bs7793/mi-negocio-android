@@ -40,7 +40,11 @@ fun HomeScreen(
         val authStatus = if (authUiState.isAnonymous) {
             stringResource(R.string.auth_status_anonymous)
         } else {
-            val displayValue = authUiState.email ?: authUiState.displayName ?: authUiState.uid.orEmpty()
+            val displayValue = listOf(
+                authUiState.email,
+                authUiState.displayName,
+                authUiState.uid,
+            ).firstOrNull { !it.isNullOrBlank() }.orEmpty()
             stringResource(R.string.auth_status_signed_in, displayValue)
         }
         Text(

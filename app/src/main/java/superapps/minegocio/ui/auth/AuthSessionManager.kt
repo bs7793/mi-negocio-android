@@ -67,6 +67,9 @@ class AuthSessionManager(
 }
 
 private fun UserInfo.isAnonymousSupabaseUser(): Boolean {
+    if (isAnonymous == true) {
+        return true
+    }
     if (appMetadata?.get("is_anonymous")?.toString()?.toBoolean() == true) {
         return true
     }

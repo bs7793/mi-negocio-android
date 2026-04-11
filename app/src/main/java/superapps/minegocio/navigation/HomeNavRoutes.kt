@@ -4,4 +4,5 @@ object HomeNavRoutes {
     const val HOME = "home"
     const val CATEGORIES = "categories"
     const val WAREHOUSES = "warehouses"
+    const val PRODUCTS = "products"
 }

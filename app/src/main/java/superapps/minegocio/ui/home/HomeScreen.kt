@@ -23,6 +23,7 @@ fun HomeScreen(
     onSignInWithGoogle: () -> Unit,
     onSignOut: () -> Unit,
     onDismissAuthError: () -> Unit,
+    onOpenProducts: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenWarehouses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -86,6 +87,10 @@ fun HomeScreen(
 
         Button(onClick = onOpenCategories) {
             Text(text = stringResource(R.string.home_open_categories))
+        }
+
+        Button(onClick = onOpenProducts) {
+            Text(text = stringResource(R.string.home_open_products))
         }
 
         Button(onClick = onOpenWarehouses) {

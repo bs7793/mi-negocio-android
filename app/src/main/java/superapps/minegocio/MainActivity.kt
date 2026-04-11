@@ -46,6 +46,7 @@ import superapps.minegocio.navigation.HomeNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
+import superapps.minegocio.ui.productsscreen.ProductsScreen
 import superapps.minegocio.ui.warehousesscreen.WarehousesScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
 
@@ -160,6 +161,9 @@ fun MyApplicationApp() {
                                 },
                                 onSignOut = { authViewModel.signOutAndContinueAnonymously() },
                                 onDismissAuthError = { authViewModel.clearError() },
+                                onOpenProducts = {
+                                    navController.navigate(HomeNavRoutes.PRODUCTS)
+                                },
                                 onOpenCategories = {
                                     navController.navigate(HomeNavRoutes.CATEGORIES)
                                 },
@@ -170,6 +174,11 @@ fun MyApplicationApp() {
                         }
                         composable(HomeNavRoutes.CATEGORIES) {
                             CategoriesScreen(
+                                onNavigateUp = { navController.popBackStack() },
+                            )
+                        }
+                        composable(HomeNavRoutes.PRODUCTS) {
+                            ProductsScreen(
                                 onNavigateUp = { navController.popBackStack() },
                             )
                         }

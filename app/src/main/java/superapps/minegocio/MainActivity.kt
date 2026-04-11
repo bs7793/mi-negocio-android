@@ -46,6 +46,7 @@ import superapps.minegocio.navigation.HomeNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
+import superapps.minegocio.ui.warehousesscreen.WarehousesScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -162,10 +163,18 @@ fun MyApplicationApp() {
                                 onOpenCategories = {
                                     navController.navigate(HomeNavRoutes.CATEGORIES)
                                 },
+                                onOpenWarehouses = {
+                                    navController.navigate(HomeNavRoutes.WAREHOUSES)
+                                },
                             )
                         }
                         composable(HomeNavRoutes.CATEGORIES) {
                             CategoriesScreen(
+                                onNavigateUp = { navController.popBackStack() },
+                            )
+                        }
+                        composable(HomeNavRoutes.WAREHOUSES) {
+                            WarehousesScreen(
                                 onNavigateUp = { navController.popBackStack() },
                             )
                         }

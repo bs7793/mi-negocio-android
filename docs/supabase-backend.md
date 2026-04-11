@@ -13,20 +13,21 @@ Este documento resume **qué hace el SQL del repo** y **por qué** existen las p
 | `20260405000003_personal_workspace_and_trial_retention.sql` | Workspace **personal** por usuario (`ensure_personal_workspace`), RPC **`get_my_primary_workspace_id`**, trigger en `auth.users`, y **`purge_expired_anonymous_trial_data`**. |
 | `20260405000004_grant_app_schema_and_secure_workspace_rpc.sql` | Permisos al schema **`app`**; **`get_my_primary_workspace_id`** como **única entrada segura** (`SECURITY DEFINER`, solo `auth.uid()`); revoca llamadas públicas a `ensure_personal_workspace` con UUID arbitrario. |
 | `20260405000005_fix_rls_recursion_membership_helpers.sql` | Evita **recursión infinita** en políticas RLS que leían `workspace_memberships` bajo RLS; helpers con **definer** / bypass donde aplica. |
+| `20260411000000_create_warehouses_table_rls.sql` | Tabla **`warehouses`** por `workspace_id` (mismo modelo RLS que `categories`: lectura miembro, escritura editor/admin según política); índice único por workspace + nombre; **`purge_expired_anonymous_trial_data`** también borra `warehouses` de usuarios anónimos expirados. |
 
 Aplicar migraciones en el **mismo orden** en tu proyecto Supabase (CLI o SQL).
 
 ## Row Level Security (RLS)
 
-- **`ALTER TABLE … ENABLE ROW LEVEL SECURITY`** en `categories`, `workspaces`, `workspace_memberships` (según migración).
-- Las **políticas** limitan quién ve o modifica filas según membresía al workspace y `workspace_id` en categorías.
+- **`ALTER TABLE … ENABLE ROW LEVEL SECURITY`** en `categories`, `warehouses`, `workspaces`, `workspace_memberships` (según migración).
+- Las **políticas** limitan quién ve o modifica filas según membresía al workspace y `workspace_id` en categorías y bodegas.
 - Si algo “no aparece” en la app, revisar JWT (usuario correcto) y que las políticas coincidan con el diseño actual.
 
 ## Funciones y RPC importantes
 
 ### `public.get_my_primary_workspace_id()`
 
-- **Para qué:** el cliente Android necesita un **UUID de workspace** para filtrar/insertar categorías; no debe poder llamar `ensure_personal_workspace(otro_uuid)`.
+- **Para qué:** el cliente Android necesita un **UUID de workspace** para filtrar/insertar categorías y bodegas; no debe poder llamar `ensure_personal_workspace(otro_uuid)`.
 - **Qué hace:** en la versión final (`…000004`), función **`SECURITY DEFINER`** que devuelve `app.ensure_personal_workspace(auth.uid())` (crea workspace personal si hace falta).
 - **Quién puede ejecutarla:** rol `authenticated` (ver `GRANT` en la migración).
 
@@ -41,7 +42,7 @@ Aplicar migraciones en el **mismo orden** en tu proyecto Supabase (CLI o SQL).
 
 ### `public.purge_expired_anonymous_trial_data()`
 
-- **Qué borra:** filas de `categories` y `workspace_memberships` asociadas a usuarios **anónimos** en `auth.users` con **`created_at` anterior a ~30 días**; luego `workspaces` sin membresías.
+- **Qué borra:** filas de `categories`, **`warehouses`** y `workspace_memberships` asociadas a usuarios **anónimos** en `auth.users` con **`created_at` anterior a ~30 días**; luego `workspaces` sin membresías.
 - **No se ejecuta sola:** hay que **programarla** (pg_cron, Supabase Scheduler, job con `service_role`, etc.). La app **no** la invoca.
 - Detalle: `supabase/functions/README.md`.
 
@@ -57,6 +58,7 @@ Aplicar migraciones en el **mismo orden** en tu proyecto Supabase (CLI o SQL).
 | Sesión y token | `AuthSessionManager`, `AuthViewModel` |
 | URL REST + cliente Supabase | `SupabaseProvider` |
 | Categorías + workspace | `CategoriesRepository` → RPC `get_my_primary_workspace_id`, REST `/categories` |
+| Bodegas + workspace | `WarehousesRepository` → misma RPC, REST `/warehouses` |
 
 ## Cuándo actualizar este doc
 

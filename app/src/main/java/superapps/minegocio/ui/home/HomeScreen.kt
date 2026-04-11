@@ -24,6 +24,7 @@ fun HomeScreen(
     onSignOut: () -> Unit,
     onDismissAuthError: () -> Unit,
     onOpenCategories: () -> Unit,
+    onOpenWarehouses: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -85,6 +86,10 @@ fun HomeScreen(
 
         Button(onClick = onOpenCategories) {
             Text(text = stringResource(R.string.home_open_categories))
+        }
+
+        Button(onClick = onOpenWarehouses) {
+            Text(text = stringResource(R.string.home_open_warehouses))
         }
     }
 }

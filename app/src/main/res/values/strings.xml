@@ -2,6 +2,7 @@
     <string name="app_name">My Business</string>
     <string name="home_title">Home</string>
     <string name="home_open_categories">Categories</string>
+    <string name="home_open_warehouses">Warehouses</string>
     <string name="auth_status_anonymous">You are using an anonymous session.</string>
     <string name="auth_status_signed_in">Signed in as %1$s</string>
     <string name="auth_action_sign_in_google">Sign in with Google</string>
@@ -27,4 +28,28 @@
     <string name="categories_action_save">Save</string>
     <string name="categories_action_saving">Saving...</string>
     <string name="cd_edit_category">Edit category</string>
+    <string name="warehouses_screen_title">Warehouses</string>
+    <string name="cd_add_warehouse">Add warehouse</string>
+    <string name="warehouses_add_sheet_title">New warehouse</string>
+    <string name="warehouses_add_sheet_subtitle">Define a storage location for your inventory.</string>
+    <string name="warehouses_field_name">Warehouse name</string>
+    <string name="warehouses_field_name_placeholder">e.g. Main storage</string>
+    <string name="warehouses_field_name_required">Warehouse name is required</string>
+    <string name="warehouses_field_location">Location</string>
+    <string name="warehouses_field_location_placeholder">Building, zone, or address</string>
+    <string name="warehouses_field_aisle">Aisle</string>
+    <string name="warehouses_field_aisle_placeholder">Aisle code</string>
+    <string name="warehouses_field_shelf">Shelf</string>
+    <string name="warehouses_field_shelf_placeholder">Shelf code</string>
+    <string name="warehouses_field_level">Level</string>
+    <string name="warehouses_field_level_placeholder">Level code</string>
+    <string name="warehouses_field_position">Position</string>
+    <string name="warehouses_field_position_placeholder">Bin or position</string>
+    <string name="warehouses_action_add">Add warehouse</string>
+    <string name="warehouses_action_creating">Creating...</string>
+    <string name="warehouses_edit_sheet_title">Edit warehouse</string>
+    <string name="warehouses_edit_sheet_subtitle">Update the warehouse details.</string>
+    <string name="warehouses_action_save">Save</string>
+    <string name="warehouses_action_saving">Saving...</string>
+    <string name="cd_edit_warehouse">Edit warehouse</string>
 </resources>

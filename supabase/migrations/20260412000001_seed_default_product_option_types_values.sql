@@ -114,16 +114,16 @@ $$;
 -- Backfill defaults for all existing workspaces.
 DO $$
 DECLARE
-  w RECORD;
+  ws RECORD;
 BEGIN
-  FOR w IN
-    SELECT DISTINCT w.id
+  FOR ws IN
+    SELECT DISTINCT w.id AS workspace_id
     FROM public.workspaces w
     JOIN public.workspace_memberships wm
       ON wm.workspace_id = w.id
      AND wm.status = 'active'
   LOOP
-    PERFORM app.seed_default_product_options_for_workspace(w.id);
+    PERFORM app.seed_default_product_options_for_workspace(ws.workspace_id);
   END LOOP;
 END $$;
 

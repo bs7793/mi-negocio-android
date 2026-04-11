@@ -1,6 +1,7 @@
 package superapps.minegocio.ui.categoriesscreen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,11 +32,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,9 +59,23 @@ fun CategoriesScreen(
     var categoryDescription by rememberSaveable { mutableStateOf("") }
     var isNameTouched by rememberSaveable { mutableStateOf(false) }
     var submitAttempted by rememberSaveable { mutableStateOf(false) }
+    var editingCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var editSubmitAttempted by remember { mutableStateOf(false) }
     val isNameInvalid = isNameTouched && categoryName.isBlank()
+    val editingCategory = editingCategoryId?.let { id ->
+        uiState.categories.find { it.id == id }
+    }
+    val editCategoryContentDescription = stringResource(R.string.cd_edit_category)
 
     BackHandler(onBack = onNavigateUp)
+
+    LaunchedEffect(editingCategoryId, uiState.categories) {
+        val id = editingCategoryId ?: return@LaunchedEffect
+        if (uiState.categories.none { it.id == id }) {
+            editingCategoryId = null
+            viewModel.clearUpdateError()
+        }
+    }
 
     LaunchedEffect(submitAttempted, uiState.isCreatingCategory, uiState.createErrorMessage) {
         if (submitAttempted && !uiState.isCreatingCategory) {
@@ -68,6 +86,15 @@ fun CategoriesScreen(
                 isNameTouched = false
             }
             submitAttempted = false
+        }
+    }
+
+    LaunchedEffect(editSubmitAttempted, uiState.isUpdatingCategory, uiState.updateErrorMessage) {
+        if (editSubmitAttempted && !uiState.isUpdatingCategory) {
+            if (uiState.updateErrorMessage == null) {
+                editingCategoryId = null
+            }
+            editSubmitAttempted = false
         }
     }
 
@@ -148,7 +175,15 @@ fun CategoriesScreen(
                             key = { it.id },
                         ) { category ->
                             ElevatedCard(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .semantics {
+                                        contentDescription = editCategoryContentDescription
+                                    }
+                                    .clickable {
+                                        editingCategoryId = category.id
+                                        viewModel.clearUpdateError()
+                                    },
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -280,6 +315,24 @@ fun CategoriesScreen(
                     }
                 }
             }
+        }
+
+        editingCategory?.let { category ->
+            CategoryEditBottomSheet(
+                category = category,
+                onDismissRequest = {
+                    editingCategoryId = null
+                    editSubmitAttempted = false
+                    viewModel.clearUpdateError()
+                },
+                onSave = { name, description ->
+                    editSubmitAttempted = true
+                    viewModel.updateCategory(category.id, name, description)
+                },
+                isSaving = uiState.isUpdatingCategory,
+                errorMessage = uiState.updateErrorMessage,
+                onClearError = { viewModel.clearUpdateError() },
+            )
         }
     }
 }

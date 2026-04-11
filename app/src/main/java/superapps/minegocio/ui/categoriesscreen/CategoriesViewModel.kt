@@ -14,6 +14,8 @@ data class CategoriesUiState(
     val errorMessage: String? = null,
     val isCreatingCategory: Boolean = false,
     val createErrorMessage: String? = null,
+    val isUpdatingCategory: Boolean = false,
+    val updateErrorMessage: String? = null,
 )
 
 class CategoriesViewModel(
@@ -82,5 +84,46 @@ class CategoriesViewModel(
 
     fun clearCreateError() {
         _uiState.update { it.copy(createErrorMessage = null) }
+    }
+
+    fun updateCategory(id: Long, name: String, description: String?) {
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) {
+            _uiState.update { it.copy(updateErrorMessage = null) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(isUpdatingCategory = true, updateErrorMessage = null)
+            }
+            try {
+                val updated = repository.updateCategory(
+                    id = id,
+                    name = trimmedName,
+                    description = description,
+                )
+                _uiState.update { state ->
+                    state.copy(
+                        isUpdatingCategory = false,
+                        updateErrorMessage = null,
+                        categories = state.categories.map { c ->
+                            if (c.id == id) updated else c
+                        },
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isUpdatingCategory = false,
+                        updateErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearUpdateError() {
+        _uiState.update { it.copy(updateErrorMessage = null) }
     }
 }

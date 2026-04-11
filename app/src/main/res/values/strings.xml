@@ -22,4 +22,9 @@
     <string name="categories_field_description_placeholder">Add an optional description</string>
     <string name="categories_action_add">Add category</string>
     <string name="categories_action_creating">Creating...</string>
+    <string name="categories_edit_sheet_title">Edit category</string>
+    <string name="categories_edit_sheet_subtitle">Update the name and description for this category.</string>
+    <string name="categories_action_save">Save</string>
+    <string name="categories_action_saving">Saving...</string>
+    <string name="cd_edit_category">Edit category</string>
 </resources>

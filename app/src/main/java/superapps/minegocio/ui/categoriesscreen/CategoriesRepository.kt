@@ -21,6 +21,12 @@ private data class CategoryInsertPayload(
     val description: String? = null,
 )
 
+@Serializable
+private data class CategoryUpdatePayload(
+    val name: String,
+    val description: String? = null,
+)
+
 class CategoriesRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
@@ -50,6 +56,21 @@ class CategoriesRepository(
         )
         val endpoint = "${SupabaseProvider.restUrl}/categories?select=id,workspace_id,name,description"
         post(endpoint, payload)
+    }
+
+    suspend fun updateCategory(id: Long, name: String, description: String?): Category = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        primaryWorkspaceId()
+        val payload = CategoryUpdatePayload(
+            name = name.trim(),
+            description = description?.trim().takeUnless { it.isNullOrBlank() },
+        )
+        val encodedId = id.toString().urlEncode()
+        val endpoint =
+            "${SupabaseProvider.restUrl}/categories" +
+                "?id=eq.$encodedId" +
+                "&select=id,workspace_id,name,description"
+        patch(endpoint, payload)
     }
 
     private suspend fun primaryWorkspaceId(): String {
@@ -111,11 +132,26 @@ class CategoriesRepository(
         val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
         val firstAttempt = executePost(endpoint, rawPayload, token)
         if (firstAttempt.code != 401) {
-            return handlePostResponse(firstAttempt.code, firstAttempt.body)
+            return handleMutationResponse(firstAttempt.code, firstAttempt.body, "Failed to create category")
         }
         val refreshedToken = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
         val retry = executePost(endpoint, rawPayload, refreshedToken)
-        return handlePostResponse(retry.code, retry.body)
+        return handleMutationResponse(retry.code, retry.body, "Failed to create category")
+    }
+
+    private suspend fun patch(
+        endpoint: String,
+        payload: CategoryUpdatePayload,
+    ): Category {
+        val rawPayload = json.encodeToString(payload)
+        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+        val firstAttempt = executePatch(endpoint, rawPayload, token)
+        if (firstAttempt.code != 401) {
+            return handleMutationResponse(firstAttempt.code, firstAttempt.body, "Failed to update category")
+        }
+        val refreshedToken = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+        val retry = executePatch(endpoint, rawPayload, refreshedToken)
+        return handleMutationResponse(retry.code, retry.body, "Failed to update category")
     }
 
     private fun executeGet(
@@ -168,6 +204,35 @@ class CategoriesRepository(
         }
     }
 
+    private fun executePatch(
+        endpoint: String,
+        rawPayload: String,
+        accessToken: String,
+    ): HttpResult {
+        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+            requestMethod = "PATCH"
+            connectTimeout = 10000
+            readTimeout = 15000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Prefer", "return=representation")
+            setRequestProperty("apikey", SupabaseProvider.anonKey)
+            setRequestProperty("Authorization", "Bearer $accessToken")
+        }
+
+        try {
+            connection.outputStream.use { output ->
+                output.write(rawPayload.toByteArray(StandardCharsets.UTF_8))
+            }
+            val code = connection.responseCode
+            val body = readBody(connection, code in 200..299)
+            return HttpResult(code = code, body = body)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun executePostEmpty(
         endpoint: String,
         accessToken: String,
@@ -180,13 +245,13 @@ class CategoriesRepository(
         return json.decodeFromString(body)
     }
 
-    private fun handlePostResponse(code: Int, body: String): Category {
+    private fun handleMutationResponse(code: Int, body: String, failureLabel: String): Category {
         if (code !in 200..299) {
-            throw IOException(parseSupabaseError(body, "Failed to create category ($code)"))
+            throw IOException(parseSupabaseError(body, "$failureLabel ($code)"))
         }
         val inserted = json.decodeFromString<List<Category>>(body)
         return inserted.firstOrNull()
-            ?: throw IOException("Category create returned an empty response")
+            ?: throw IOException("Category operation returned an empty response")
     }
 }
 

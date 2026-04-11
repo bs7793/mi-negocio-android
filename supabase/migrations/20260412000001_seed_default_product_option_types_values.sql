@@ -44,8 +44,10 @@ BEGIN
     wm.created_at
   LIMIT 1;
 
-  IF v_seed_user_id IS NULL THEN
-    RAISE EXCEPTION 'Cannot seed product options without an active workspace membership';
+  IF v_seed_user_id IS NULL AND auth.uid() IS NULL THEN
+    -- Some legacy/system workspaces may exist without active memberships.
+    -- Skip seeding for those rows to avoid failing the whole migration batch.
+    RETURN;
   END IF;
 
   FOR v_type IN SELECT * FROM jsonb_array_elements(v_default_types)
@@ -114,7 +116,12 @@ DO $$
 DECLARE
   w RECORD;
 BEGIN
-  FOR w IN SELECT id FROM public.workspaces
+  FOR w IN
+    SELECT DISTINCT w.id
+    FROM public.workspaces w
+    JOIN public.workspace_memberships wm
+      ON wm.workspace_id = w.id
+     AND wm.status = 'active'
   LOOP
     PERFORM app.seed_default_product_options_for_workspace(w.id);
   END LOOP;

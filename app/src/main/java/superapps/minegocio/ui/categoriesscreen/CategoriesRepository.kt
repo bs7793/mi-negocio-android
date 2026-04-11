@@ -6,6 +6,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import superapps.minegocio.ui.auth.AuthSessionManager
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -104,11 +106,32 @@ class CategoriesRepository(
         if (code !in 200..299) {
             throw IOException(parseSupabaseError(body, "Failed to resolve workspace ($code)"))
         }
-        val trimmed = body.trim().trim('"')
-        if (trimmed.isBlank()) {
-            throw IOException("Workspace id was empty")
+        val trimmed = body.trim()
+        if (trimmed.isEmpty()) {
+            throw IOException("Workspace id response was empty")
         }
-        return trimmed
+        val element = try {
+            json.parseToJsonElement(trimmed)
+        } catch (e: Exception) {
+            throw IOException(
+                parseSupabaseError(trimmed, "Invalid JSON in workspace response"),
+                e,
+            )
+        }
+        return when (element) {
+            JsonNull -> throw IOException("Workspace id was null")
+            is JsonPrimitive -> {
+                if (!element.isString) {
+                    throw IOException("Workspace id must be a JSON string, got: ${element.content}")
+                }
+                val id = element.content
+                if (id.isBlank()) {
+                    throw IOException("Workspace id was empty")
+                }
+                id
+            }
+            else -> throw IOException("Expected a JSON string scalar for workspace id")
+        }
     }
 
     private suspend fun get(

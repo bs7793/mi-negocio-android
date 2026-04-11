@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import superapps.minegocio.ui.auth.AuthSessionManager
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -91,15 +92,21 @@ class CategoriesRepository(
     }
 
     private suspend fun fetchPrimaryWorkspaceId(): String {
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
-        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
-        val first = executePostEmpty(endpoint, token)
-        if (first.code != 401) {
-            return parseWorkspaceRpcResponse(first.code, first.body)
+        return try {
+            val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
+            val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+            val first = executePostEmpty(endpoint, token)
+            if (first.code != 401) {
+                parseWorkspaceRpcResponse(first.code, first.body)
+            } else {
+                val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+                val retry = executePostEmpty(endpoint, refreshed)
+                parseWorkspaceRpcResponse(retry.code, retry.body)
+            }
+        } catch (e: Exception) {
+            reportWorkspaceResolutionToCrashlytics(e)
+            throw e
         }
-        val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
-        val retry = executePostEmpty(endpoint, refreshed)
-        return parseWorkspaceRpcResponse(retry.code, retry.body)
     }
 
     private fun parseWorkspaceRpcResponse(code: Int, body: String): String {
@@ -298,4 +305,15 @@ private fun parseSupabaseError(rawBody: String, fallback: String): String {
     if (rawBody.isBlank()) return fallback
     val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
     return message ?: fallback
+}
+
+private fun reportWorkspaceResolutionToCrashlytics(throwable: Throwable) {
+    try {
+        FirebaseCrashlytics.getInstance().apply {
+            log("workspace_rpc get_my_primary_workspace_id failed")
+            recordException(throwable)
+        }
+    } catch (_: Exception) {
+        // Avoid masking the original error if Crashlytics is unavailable.
+    }
 }

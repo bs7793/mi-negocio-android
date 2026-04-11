@@ -3,6 +3,7 @@ package superapps.minegocio.ui.productsscreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.categoriesscreen.Category
@@ -27,12 +28,12 @@ class ProductsRepository(
     ): ProductsListResponse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_products_list"
-        val payload = mapOf(
-            "p_limit" to limit,
-            "p_offset" to offset,
-            "p_search" to search?.trim().takeUnless { it.isNullOrBlank() },
-            "p_category_id" to categoryId,
-            "p_warehouse_id" to warehouseId,
+        val payload = GetProductsListRpcPayload(
+            limit = limit,
+            offset = offset,
+            search = search?.trim().takeUnless { it.isNullOrBlank() },
+            categoryId = categoryId,
+            warehouseId = warehouseId,
         )
         val body = json.encodeToString(payload)
         val result = post(endpoint, body)
@@ -65,7 +66,7 @@ class ProductsRepository(
     suspend fun createProduct(payload: CreateProductPayload): Product = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_product_with_variants"
-        val body = json.encodeToString(mapOf("p_payload" to payload))
+        val body = json.encodeToString(CreateProductRpcPayload(payload = payload))
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to create product (${result.code})"))
@@ -139,4 +140,24 @@ private fun parseSupabaseError(rawBody: String, fallback: String): String {
     val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
     return message ?: fallback
 }
+
+@Serializable
+private data class GetProductsListRpcPayload(
+    @kotlinx.serialization.SerialName("p_limit")
+    val limit: Int,
+    @kotlinx.serialization.SerialName("p_offset")
+    val offset: Int,
+    @kotlinx.serialization.SerialName("p_search")
+    val search: String? = null,
+    @kotlinx.serialization.SerialName("p_category_id")
+    val categoryId: Long? = null,
+    @kotlinx.serialization.SerialName("p_warehouse_id")
+    val warehouseId: Long? = null,
+)
+
+@Serializable
+private data class CreateProductRpcPayload(
+    @kotlinx.serialization.SerialName("p_payload")
+    val payload: CreateProductPayload,
+)
 

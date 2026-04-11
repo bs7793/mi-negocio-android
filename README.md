@@ -61,3 +61,4 @@ gradlew.bat assembleDebug
 - `app/src/main/java/superapps/minegocio/` — código fuente Kotlin (UI, auth, categorías, etc.)
 - `supabase/migrations/` — esquema Postgres, RLS y funciones relacionadas con workspaces y categorías
 - `supabase/functions/README.md` — notas sobre funciones edge (no obligatorias para el flujo actual Auth + PostgREST)
+- [`docs/supabase-backend.md`](docs/supabase-backend.md) — referencia del backend SQL (orden de migraciones, RLS, RPC, retención anónima, punteros al código Android)

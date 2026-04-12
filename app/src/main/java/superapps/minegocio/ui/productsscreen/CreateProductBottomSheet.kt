@@ -38,6 +38,7 @@ import superapps.minegocio.ui.warehousesscreen.Warehouse
 
 private data class VariantDraft(
     val sku: String = "",
+    val costPrice: String = "",
     val unitPrice: String = "",
     val barcode: String = "",
     val selectedOptionType: String? = null,
@@ -75,11 +76,12 @@ fun CreateProductBottomSheet(
     val hasVariantErrors = submitAttempted && variants.any { variant ->
         val skuInvalid = variant.sku.isBlank()
         val priceInvalid = variant.unitPrice.toDoubleOrNull() == null
+        val costInvalid = isCostPriceDraftInvalid(variant.costPrice)
         val hasInlineTypeError = variant.isCreatingNewType && variant.newOptionTypeText.isBlank()
         val hasInlineValueError = variant.isCreatingNewValue && variant.newOptionValueText.isBlank()
         val hasHalfOptionSelected =
             (variant.selectedOptionType.isNullOrBlank()) xor (variant.selectedOptionValue.isNullOrBlank())
-        skuInvalid || priceInvalid || hasInlineTypeError || hasInlineValueError || hasHalfOptionSelected
+        skuInvalid || priceInvalid || costInvalid || hasInlineTypeError || hasInlineValueError || hasHalfOptionSelected
     }
 
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
@@ -223,6 +225,28 @@ fun CreateProductBottomSheet(
                             isError = submitAttempted && variant.sku.isBlank(),
                             singleLine = true,
                         )
+
+                        OutlinedTextField(
+                            value = variant.costPrice,
+                            onValueChange = { value ->
+                                variants = variants.mapIndexed { i, item ->
+                                    if (i == index) item.copy(costPrice = value) else item
+                                }
+                                if (errorMessage != null) onClearError()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.products_field_cost_price)) },
+                            placeholder = { Text(stringResource(R.string.products_field_cost_price_placeholder)) },
+                            singleLine = true,
+                            isError = submitAttempted && isCostPriceDraftInvalid(variant.costPrice),
+                        )
+                        if (submitAttempted && isCostPriceDraftInvalid(variant.costPrice)) {
+                            Text(
+                                text = stringResource(R.string.products_field_cost_price_invalid),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
 
                         OutlinedTextField(
                             value = variant.unitPrice,
@@ -552,6 +576,10 @@ private fun buildPayloadOrNull(
         val sku = draft.sku.trim()
         val unitPrice = draft.unitPrice.toDoubleOrNull()
         if (sku.isBlank() || unitPrice == null) return null
+        if (isCostPriceDraftInvalid(draft.costPrice)) return null
+
+        val costTrimmed = draft.costPrice.trim()
+        val costPrice = costTrimmed.toDoubleOrNull()
 
         val selectedType = draft.selectedOptionType?.trim().orEmpty()
         val selectedValue = draft.selectedOptionValue?.trim().orEmpty()
@@ -579,6 +607,7 @@ private fun buildPayloadOrNull(
             sku = sku,
             barcode = draft.barcode.trim().takeUnless { it.isBlank() },
             unitPrice = unitPrice,
+            costPrice = costPrice,
             optionValues = optionInputs,
             inventory = inventoryRows,
         )
@@ -592,5 +621,13 @@ private fun buildPayloadOrNull(
         categoryId = categoryId,
         variants = variantInputs,
     )
+}
+
+/** True when non-blank after trim but not a valid non-negative number. */
+private fun isCostPriceDraftInvalid(costPriceDraft: String): Boolean {
+    val trimmed = costPriceDraft.trim()
+    if (trimmed.isEmpty()) return false
+    val value = trimmed.toDoubleOrNull() ?: return true
+    return value < 0
 }
 

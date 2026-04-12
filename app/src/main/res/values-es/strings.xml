@@ -14,4 +14,8 @@
     <string name="categories_field_description_placeholder">Agrega una descripción opcional</string>
     <string name="categories_action_add">Agregar categoría</string>
     <string name="categories_action_creating">Creando...</string>
+    <string name="products_field_cost_price">Precio de costo</string>
+    <string name="products_field_cost_price_placeholder">Opcional, ej. 8,50</string>
+    <string name="products_field_cost_price_invalid">Introduce un costo válido (0 o mayor) o déjalo en blanco</string>
+    <string name="products_variant_validation_error">Cada variante requiere SKU, precio unitario válido, precio de costo opcional válido y selección de opciones completa.</string>
 </resources>

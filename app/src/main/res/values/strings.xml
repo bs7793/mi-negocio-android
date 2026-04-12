@@ -81,6 +81,9 @@
     <string name="products_variant_label">Variant %1$d</string>
     <string name="products_field_sku">SKU</string>
     <string name="products_field_sku_placeholder">e.g. TSHIRT-BLK-M</string>
+    <string name="products_field_cost_price">Cost price</string>
+    <string name="products_field_cost_price_placeholder">Optional, e.g. 8.50</string>
+    <string name="products_field_cost_price_invalid">Enter a valid cost (0 or greater), or leave blank</string>
     <string name="products_field_unit_price">Unit price</string>
     <string name="products_field_unit_price_placeholder">e.g. 12.99</string>
     <string name="products_field_barcode">Barcode</string>
@@ -97,7 +100,7 @@
     <string name="products_field_new_option_value">New option value</string>
     <string name="products_inventory_per_warehouse">Initial inventory per warehouse</string>
     <string name="products_action_add_variant">Add another variant</string>
-    <string name="products_variant_validation_error">Each variant requires SKU, valid unit price, and complete option selection.</string>
+    <string name="products_variant_validation_error">Each variant requires SKU, valid unit price, valid optional cost price, and complete option selection.</string>
     <string name="products_action_add">Add product</string>
     <string name="products_action_creating">Creating...</string>
 </resources>

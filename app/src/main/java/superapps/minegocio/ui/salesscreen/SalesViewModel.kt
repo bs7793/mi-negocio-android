@@ -19,6 +19,7 @@ data class SalesUiState(
     val warehouses: List<Warehouse> = emptyList(),
     val selectedWarehouseId: Long? = null,
     val searchQuery: String = "",
+    val hasSearched: Boolean = false,
     val customerNameInput: String = "Public",
     val notesInput: String = "",
     val paymentDraft: SalesPaymentDraft = SalesPaymentDraft(),
@@ -160,10 +161,51 @@ class SalesViewModel(
     fun searchVariants() {
         viewModelScope.launch {
             val warehouseId = _uiState.value.selectedWarehouseId
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    hasSearched = true,
+                    errorMessage = null,
+                    successMessage = null,
+                )
+            }
             try {
                 val variants = repository.fetchSellableVariants(
                     search = _uiState.value.searchQuery,
+                    warehouseId = warehouseId,
+                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        variants = variants.items,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearSearchAndReload() {
+        viewModelScope.launch {
+            val warehouseId = _uiState.value.selectedWarehouseId
+            _uiState.update {
+                it.copy(
+                    searchQuery = "",
+                    hasSearched = false,
+                    isLoading = true,
+                    errorMessage = null,
+                    successMessage = null,
+                )
+            }
+            try {
+                val variants = repository.fetchSellableVariants(
+                    search = null,
                     warehouseId = warehouseId,
                 )
                 _uiState.update {

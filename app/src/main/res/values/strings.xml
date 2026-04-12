@@ -105,8 +105,8 @@
     <string name="products_action_add">Add product</string>
     <string name="products_action_creating">Creating...</string>
     <string name="sales_screen_title">Sales</string>
-    <string name="sales_search_label">Search products</string>
-    <string name="sales_search_placeholder">Name, SKU, or barcode</string>
+    <string name="sales_search_label">Search sellable variants</string>
+    <string name="sales_search_placeholder">Product name, SKU, or barcode</string>
     <string name="sales_search_action">Find</string>
     <string name="sales_warehouse_label">Warehouse</string>
     <string name="sales_select_warehouse_label">Select warehouse</string>
@@ -115,6 +115,8 @@
     <string name="sales_daily_summary_totals">Sales: %1$d  Units: %2$.3f  Total: %3$.2f</string>
     <string name="sales_daily_summary_breakdown">Cash: %1$.2f  Card: %2$.2f  Transfer: %3$.2f  Other: %4$.2f</string>
     <string name="sales_products_section_title">Quick sale catalog</string>
+    <string name="sales_search_empty_message">No sellable variants found. Only products with active variants are shown here.</string>
+    <string name="sales_clear_search_action">Clear search</string>
     <string name="sales_cart_section_title">Current ticket</string>
     <string name="sales_cart_empty">No items in the ticket yet.</string>
     <string name="sales_customer_label">Customer (optional)</string>

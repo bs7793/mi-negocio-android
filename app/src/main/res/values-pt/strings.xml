@@ -20,8 +20,8 @@
     <string name="products_field_cost_price_invalid">Informe um custo válido (0 ou maior) ou deixe em branco</string>
     <string name="products_variant_validation_error">Cada variante exige SKU, preço unitário válido, preço de custo opcional válido e seleção de opções completa.</string>
     <string name="sales_screen_title">Vendas</string>
-    <string name="sales_search_label">Buscar produtos</string>
-    <string name="sales_search_placeholder">Nome, SKU ou código de barras</string>
+    <string name="sales_search_label">Buscar variantes vendáveis</string>
+    <string name="sales_search_placeholder">Nome do produto, SKU ou código de barras</string>
     <string name="sales_search_action">Buscar</string>
     <string name="sales_warehouse_label">Depósito</string>
     <string name="sales_select_warehouse_label">Selecionar depósito</string>
@@ -30,6 +30,8 @@
     <string name="sales_daily_summary_totals">Vendas: %1$d  Unidades: %2$.3f  Total: %3$.2f</string>
     <string name="sales_daily_summary_breakdown">Dinheiro: %1$.2f  Cartão: %2$.2f  Transferência: %3$.2f  Outro: %4$.2f</string>
     <string name="sales_products_section_title">Catálogo de venda rápida</string>
+    <string name="sales_search_empty_message">Nenhuma variante vendável encontrada. Aqui aparecem apenas produtos com variantes ativas.</string>
+    <string name="sales_clear_search_action">Limpar busca</string>
     <string name="sales_cart_section_title">Ticket atual</string>
     <string name="sales_cart_empty">Ainda não há itens no ticket.</string>
     <string name="sales_customer_label">Cliente (opcional)</string>

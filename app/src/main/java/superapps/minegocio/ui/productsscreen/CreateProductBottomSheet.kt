@@ -40,8 +40,12 @@ private data class VariantDraft(
     val sku: String = "",
     val unitPrice: String = "",
     val barcode: String = "",
-    val optionType: String = "",
-    val optionValue: String = "",
+    val selectedOptionType: String? = null,
+    val selectedOptionValue: String? = null,
+    val isCreatingNewType: Boolean = false,
+    val isCreatingNewValue: Boolean = false,
+    val newOptionTypeText: String = "",
+    val newOptionValueText: String = "",
     val warehouseQuantities: Map<Long, String> = emptyMap(),
 )
 
@@ -50,6 +54,7 @@ private data class VariantDraft(
 fun CreateProductBottomSheet(
     categories: List<Category>,
     warehouses: List<Warehouse>,
+    optionTypesCatalog: List<ProductOptionTypeCatalog>,
     isSubmitting: Boolean,
     errorMessage: String?,
     onDismissRequest: () -> Unit,
@@ -62,9 +67,20 @@ fun CreateProductBottomSheet(
     var isCategoryMenuOpen by remember { mutableStateOf(false) }
     var variants by remember { mutableStateOf(listOf(VariantDraft())) }
     var submitAttempted by remember { mutableStateOf(false) }
+    var typeMenuIndexOpen by remember { mutableStateOf<Int?>(null) }
+    var valueMenuIndexOpen by remember { mutableStateOf<Int?>(null) }
+    var localOptionTypes by remember(optionTypesCatalog) { mutableStateOf(optionTypesCatalog) }
 
     val isProductNameInvalid = submitAttempted && productName.isBlank()
-    val hasVariantErrors = submitAttempted && variants.any { it.sku.isBlank() || it.unitPrice.toDoubleOrNull() == null }
+    val hasVariantErrors = submitAttempted && variants.any { variant ->
+        val skuInvalid = variant.sku.isBlank()
+        val priceInvalid = variant.unitPrice.toDoubleOrNull() == null
+        val hasInlineTypeError = variant.isCreatingNewType && variant.newOptionTypeText.isBlank()
+        val hasInlineValueError = variant.isCreatingNewValue && variant.newOptionValueText.isBlank()
+        val hasHalfOptionSelected =
+            (variant.selectedOptionType.isNullOrBlank()) xor (variant.selectedOptionValue.isNullOrBlank())
+        skuInvalid || priceInvalid || hasInlineTypeError || hasInlineValueError || hasHalfOptionSelected
+    }
 
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
         Column(
@@ -118,7 +134,8 @@ fun CreateProductBottomSheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = categories.firstOrNull { it.id == selectedCategoryId }?.name ?: stringResource(R.string.products_category_none),
+                    value = categories.firstOrNull { it.id == selectedCategoryId }?.name
+                        ?: stringResource(R.string.products_category_none),
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -163,10 +180,11 @@ fun CreateProductBottomSheet(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp),
+                    .height(280.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 itemsIndexed(variants) { index, variant ->
+                    val selectedType = localOptionTypes.firstOrNull { it.name == variant.selectedOptionType }
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -236,28 +254,196 @@ fun CreateProductBottomSheet(
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
-                                value = variant.optionType,
-                                onValueChange = { value ->
-                                    variants = variants.mapIndexed { i, item ->
-                                        if (i == index) item.copy(optionType = value) else item
+                                value = variant.selectedOptionType
+                                    ?: stringResource(R.string.products_option_type_none),
+                                onValueChange = {},
+                                readOnly = true,
+                                modifier = Modifier.weight(1f),
+                                label = { Text(stringResource(R.string.products_field_option_type_selector)) },
+                                singleLine = true,
+                                trailingIcon = {
+                                    IconButton(onClick = { typeMenuIndexOpen = index }) {
+                                        Icon(Icons.Default.Add, contentDescription = null)
                                     }
                                 },
-                                modifier = Modifier.weight(1f),
-                                label = { Text(stringResource(R.string.products_field_option_type)) },
-                                placeholder = { Text("Size") },
-                                singleLine = true,
                             )
+                            DropdownMenu(
+                                expanded = typeMenuIndexOpen == index,
+                                onDismissRequest = { typeMenuIndexOpen = null },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_option_type_none)) },
+                                    onClick = {
+                                        variants = variants.mapIndexed { i, item ->
+                                            if (i == index) {
+                                                item.copy(
+                                                    selectedOptionType = null,
+                                                    selectedOptionValue = null,
+                                                )
+                                            } else {
+                                                item
+                                            }
+                                        }
+                                        typeMenuIndexOpen = null
+                                    },
+                                )
+                                localOptionTypes.forEach { optionType ->
+                                    DropdownMenuItem(
+                                        text = { Text(optionType.name) },
+                                        onClick = {
+                                            variants = variants.mapIndexed { i, item ->
+                                                if (i == index) {
+                                                    item.copy(
+                                                        selectedOptionType = optionType.name,
+                                                        selectedOptionValue = null,
+                                                        isCreatingNewType = false,
+                                                        newOptionTypeText = "",
+                                                    )
+                                                } else {
+                                                    item
+                                                }
+                                            }
+                                            typeMenuIndexOpen = null
+                                        },
+                                    )
+                                }
+                            }
+
                             OutlinedTextField(
-                                value = variant.optionValue,
-                                onValueChange = { value ->
+                                value = variant.selectedOptionValue
+                                    ?: stringResource(R.string.products_option_value_none),
+                                onValueChange = {},
+                                readOnly = true,
+                                modifier = Modifier.weight(1f),
+                                label = { Text(stringResource(R.string.products_field_option_value_selector)) },
+                                singleLine = true,
+                                trailingIcon = {
+                                    IconButton(onClick = { valueMenuIndexOpen = index }) {
+                                        Icon(Icons.Default.Add, contentDescription = null)
+                                    }
+                                },
+                            )
+                            DropdownMenu(
+                                expanded = valueMenuIndexOpen == index,
+                                onDismissRequest = { valueMenuIndexOpen = null },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_option_value_none)) },
+                                    onClick = {
+                                        variants = variants.mapIndexed { i, item ->
+                                            if (i == index) item.copy(selectedOptionValue = null) else item
+                                        }
+                                        valueMenuIndexOpen = null
+                                    },
+                                )
+                                selectedType?.values.orEmpty().forEach { optionValue ->
+                                    DropdownMenuItem(
+                                        text = { Text(optionValue.value) },
+                                        onClick = {
+                                            variants = variants.mapIndexed { i, item ->
+                                                if (i == index) item.copy(selectedOptionValue = optionValue.value) else item
+                                            }
+                                            valueMenuIndexOpen = null
+                                        },
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
                                     variants = variants.mapIndexed { i, item ->
-                                        if (i == index) item.copy(optionValue = value) else item
+                                        if (i == index) item.copy(isCreatingNewType = !item.isCreatingNewType) else item
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
-                                label = { Text(stringResource(R.string.products_field_option_value)) },
-                                placeholder = { Text("M") },
+                            ) {
+                                Text(stringResource(R.string.products_action_new_option_type))
+                            }
+                            Button(
+                                onClick = {
+                                    variants = variants.mapIndexed { i, item ->
+                                        if (i == index) item.copy(isCreatingNewValue = !item.isCreatingNewValue) else item
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                enabled = variant.selectedOptionType != null || variant.isCreatingNewType,
+                            ) {
+                                Text(stringResource(R.string.products_action_new_option_value))
+                            }
+                        }
+
+                        if (variant.isCreatingNewType) {
+                            OutlinedTextField(
+                                value = variant.newOptionTypeText,
+                                onValueChange = { value ->
+                                    val normalized = value.trim()
+                                    variants = variants.mapIndexed { i, item ->
+                                        if (i == index) {
+                                            item.copy(
+                                                newOptionTypeText = value,
+                                                selectedOptionType = normalized.takeUnless { it.isBlank() },
+                                                selectedOptionValue = null,
+                                            )
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                    if (normalized.isNotBlank() &&
+                                        localOptionTypes.none { it.name.equals(normalized, ignoreCase = true) }
+                                    ) {
+                                        localOptionTypes = localOptionTypes + ProductOptionTypeCatalog(
+                                            id = -1L * (localOptionTypes.size + 1),
+                                            name = normalized,
+                                            values = emptyList(),
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.products_field_new_option_type)) },
                                 singleLine = true,
+                                isError = submitAttempted && variant.newOptionTypeText.isBlank(),
+                            )
+                        }
+
+                        if (variant.isCreatingNewValue) {
+                            OutlinedTextField(
+                                value = variant.newOptionValueText,
+                                onValueChange = { value ->
+                                    val normalized = value.trim()
+                                    variants = variants.mapIndexed { i, item ->
+                                        if (i == index) {
+                                            item.copy(
+                                                newOptionValueText = value,
+                                                selectedOptionValue = normalized.takeUnless { it.isBlank() },
+                                            )
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                    val typeName = variants.getOrNull(index)?.selectedOptionType?.trim().orEmpty()
+                                    if (normalized.isNotBlank() && typeName.isNotBlank()) {
+                                        localOptionTypes = localOptionTypes.map { type ->
+                                            if (!type.name.equals(typeName, ignoreCase = true)) return@map type
+                                            val exists = type.values.any { it.value.equals(normalized, ignoreCase = true) }
+                                            if (exists) {
+                                                type
+                                            } else {
+                                                type.copy(
+                                                    values = type.values + ProductOptionValueCatalog(
+                                                        id = -1L * (type.values.size + 1),
+                                                        value = normalized,
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.products_field_new_option_value)) },
+                                singleLine = true,
+                                isError = submitAttempted && variant.newOptionValueText.isBlank(),
                             )
                         }
 
@@ -367,11 +553,15 @@ private fun buildPayloadOrNull(
         val unitPrice = draft.unitPrice.toDoubleOrNull()
         if (sku.isBlank() || unitPrice == null) return null
 
-        val optionInputs = if (draft.optionType.isNotBlank() && draft.optionValue.isNotBlank()) {
+        val selectedType = draft.selectedOptionType?.trim().orEmpty()
+        val selectedValue = draft.selectedOptionValue?.trim().orEmpty()
+        if ((selectedType.isBlank()) xor (selectedValue.isBlank())) return null
+
+        val optionInputs = if (selectedType.isNotBlank() && selectedValue.isNotBlank()) {
             listOf(
                 ProductOptionInput(
-                    type = draft.optionType.trim(),
-                    value = draft.optionValue.trim(),
+                    type = selectedType,
+                    value = selectedValue,
                 ),
             )
         } else {

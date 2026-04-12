@@ -148,6 +148,14 @@ BEGIN
           RAISE EXCEPTION 'Validation: option_values requires non-empty type and value';
         END IF;
 
+        IF LENGTH(v_option_type_name) > 50 THEN
+          RAISE EXCEPTION 'Validation: option type must be 50 chars or less';
+        END IF;
+
+        IF LENGTH(v_option_value_text) > 100 THEN
+          RAISE EXCEPTION 'Validation: option value must be 100 chars or less';
+        END IF;
+
         INSERT INTO public.product_option_types (
           workspace_id,
           created_by,
@@ -367,6 +375,60 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.get_product_options_catalog()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_workspace_id UUID;
+BEGIN
+  v_workspace_id := public.get_my_primary_workspace_id();
+
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'Workspace could not be resolved';
+  END IF;
+
+  IF NOT app.is_active_workspace_member(v_workspace_id) THEN
+    RAISE EXCEPTION 'Not authorized to read product options in workspace %', v_workspace_id;
+  END IF;
+
+  RETURN (
+    SELECT jsonb_build_object(
+      'option_types',
+      COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', pot.id,
+            'name', pot.name,
+            'input_kind', pot.input_kind,
+            'values', COALESCE((
+              SELECT jsonb_agg(
+                jsonb_build_object(
+                  'id', pov.id,
+                  'value', pov.value,
+                  'sort_order', pov.sort_order
+                )
+                ORDER BY pov.sort_order ASC, LOWER(pov.value) ASC
+              )
+              FROM public.product_option_values pov
+              WHERE pov.workspace_id = v_workspace_id
+                AND pov.option_type_id = pot.id
+                AND pov.is_active = TRUE
+            ), '[]'::jsonb)
+          )
+          ORDER BY LOWER(pot.name) ASC
+        )
+        FROM public.product_option_types pot
+        WHERE pot.workspace_id = v_workspace_id
+          AND pot.is_active = TRUE
+      ), '[]'::jsonb)
+    )
+  );
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.get_products_list(
   p_limit INT DEFAULT 20,
   p_offset INT DEFAULT 0,
@@ -499,4 +561,5 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.create_product_with_variants(JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_product_options_catalog() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_products_list(INT, INT, TEXT, BIGINT, BIGINT) TO authenticated;

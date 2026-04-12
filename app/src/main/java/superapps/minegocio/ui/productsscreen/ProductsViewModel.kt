@@ -16,6 +16,7 @@ data class ProductsUiState(
     val products: List<Product> = emptyList(),
     val categories: List<Category> = emptyList(),
     val warehouses: List<Warehouse> = emptyList(),
+    val optionTypesCatalog: List<ProductOptionTypeCatalog> = emptyList(),
     val total: Int = 0,
     val searchQuery: String = "",
     val selectedCategoryId: Long? = null,
@@ -41,6 +42,7 @@ class ProductsViewModel(
             try {
                 val categoriesDeferred = async { repository.fetchCategories() }
                 val warehousesDeferred = async { repository.fetchWarehouses() }
+                val optionCatalogDeferred = async { repository.fetchProductOptionsCatalog() }
                 val productsDeferred = async {
                     repository.fetchProducts(
                         search = _uiState.value.searchQuery,
@@ -50,12 +52,14 @@ class ProductsViewModel(
                 }
                 val categories = categoriesDeferred.await()
                 val warehouses = warehousesDeferred.await()
+                val optionCatalog = optionCatalogDeferred.await()
                 val products = productsDeferred.await()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         categories = categories,
                         warehouses = warehouses,
+                        optionTypesCatalog = optionCatalog.optionTypes,
                         products = products.items,
                         total = products.total,
                         errorMessage = null,
@@ -130,10 +134,12 @@ class ProductsViewModel(
                     categoryId = _uiState.value.selectedCategoryId,
                     warehouseId = _uiState.value.selectedWarehouseId,
                 )
+                val optionCatalog = repository.fetchProductOptionsCatalog()
                 _uiState.update {
                     it.copy(
                         isCreatingProduct = false,
                         createErrorMessage = null,
+                        optionTypesCatalog = optionCatalog.optionTypes,
                         products = refreshed.items,
                         total = refreshed.total,
                     )

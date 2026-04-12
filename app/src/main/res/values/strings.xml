@@ -87,9 +87,17 @@
     <string name="products_field_barcode_placeholder">Optional barcode</string>
     <string name="products_field_option_type">Option type</string>
     <string name="products_field_option_value">Option value</string>
+    <string name="products_field_option_type_selector">Option type</string>
+    <string name="products_field_option_value_selector">Option value</string>
+    <string name="products_option_type_none">No option type</string>
+    <string name="products_option_value_none">No option value</string>
+    <string name="products_action_new_option_type">+ New type</string>
+    <string name="products_action_new_option_value">+ New value</string>
+    <string name="products_field_new_option_type">New option type</string>
+    <string name="products_field_new_option_value">New option value</string>
     <string name="products_inventory_per_warehouse">Initial inventory per warehouse</string>
     <string name="products_action_add_variant">Add another variant</string>
-    <string name="products_variant_validation_error">Each variant requires SKU and a valid unit price.</string>
+    <string name="products_variant_validation_error">Each variant requires SKU, valid unit price, and complete option selection.</string>
     <string name="products_action_add">Add product</string>
     <string name="products_action_creating">Creating...</string>
 </resources>

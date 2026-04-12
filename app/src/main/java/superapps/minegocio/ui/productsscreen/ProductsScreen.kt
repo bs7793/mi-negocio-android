@@ -326,6 +326,7 @@ fun ProductsScreen(
         CreateProductBottomSheet(
             categories = uiState.categories,
             warehouses = uiState.warehouses,
+            optionTypesCatalog = uiState.optionTypesCatalog,
             isSubmitting = uiState.isCreatingProduct,
             errorMessage = uiState.createErrorMessage,
             onDismissRequest = {

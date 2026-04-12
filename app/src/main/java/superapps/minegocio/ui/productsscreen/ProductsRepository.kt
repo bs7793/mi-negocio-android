@@ -63,6 +63,17 @@ class ProductsRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
+    suspend fun fetchProductOptionsCatalog(): ProductOptionsCatalogResponse = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_product_options_catalog"
+        val body = "{}"
+        val result = post(endpoint, body)
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to fetch options catalog (${result.code})"))
+        }
+        return@withContext json.decodeFromString(result.body)
+    }
+
     suspend fun createProduct(payload: CreateProductPayload): Product = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_product_with_variants"

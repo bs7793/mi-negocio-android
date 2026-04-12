@@ -191,7 +191,7 @@ fun SalesScreen(
             } else {
                 items(
                     items = uiState.variants,
-                    key = { it.variantId },
+                    key = { "catalog-${it.variantId}" },
                 ) { variant ->
                     SellableVariantCard(
                         modifier = Modifier.heightIn(max = 180.dp),
@@ -220,7 +220,7 @@ fun SalesScreen(
             } else {
                 items(
                     items = uiState.cartItems,
-                    key = { it.variant.variantId },
+                    key = { "cart-${it.variant.variantId}" },
                 ) { item ->
                     CartItemCard(
                         item = item,

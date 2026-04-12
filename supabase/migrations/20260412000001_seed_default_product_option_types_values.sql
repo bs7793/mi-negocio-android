@@ -111,20 +111,4 @@ BEGIN
 END;
 $$;
 
--- Backfill defaults for all existing workspaces.
-DO $$
-DECLARE
-  ws RECORD;
-BEGIN
-  FOR ws IN
-    SELECT DISTINCT w.id AS workspace_id
-    FROM public.workspaces w
-    JOIN public.workspace_memberships wm
-      ON wm.workspace_id = w.id
-     AND wm.status = 'active'
-  LOOP
-    PERFORM app.seed_default_product_options_for_workspace(ws.workspace_id);
-  END LOOP;
-END $$;
-
 GRANT EXECUTE ON FUNCTION app.seed_default_product_options_for_workspace(UUID) TO authenticated;

@@ -47,29 +47,6 @@ AS $$
   LIMIT 1;
 $$;
 
--- Migrate users off the shared default workspace into a personal owner workspace.
-DO $$
-DECLARE
-  r RECORD;
-  v_ws UUID;
-  v_default UUID := '11111111-1111-1111-1111-111111111111';
-BEGIN
-  FOR r IN
-    SELECT DISTINCT wm.user_id
-    FROM public.workspace_memberships wm
-    WHERE wm.workspace_id = v_default
-  LOOP
-    v_ws := app.ensure_personal_workspace(r.user_id);
-    UPDATE public.categories c
-    SET workspace_id = v_ws
-    WHERE c.created_by = r.user_id
-      AND c.workspace_id = v_default;
-    DELETE FROM public.workspace_memberships wm
-    WHERE wm.workspace_id = v_default
-      AND wm.user_id = r.user_id;
-  END LOOP;
-END $$;
-
 CREATE OR REPLACE FUNCTION app.handle_new_auth_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql

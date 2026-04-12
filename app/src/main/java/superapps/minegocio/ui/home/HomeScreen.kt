@@ -24,6 +24,7 @@ fun HomeScreen(
     onSignOut: () -> Unit,
     onDismissAuthError: () -> Unit,
     onOpenProducts: () -> Unit,
+    onOpenSales: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenWarehouses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -91,6 +92,10 @@ fun HomeScreen(
 
         Button(onClick = onOpenProducts) {
             Text(text = stringResource(R.string.home_open_products))
+        }
+
+        Button(onClick = onOpenSales) {
+            Text(text = stringResource(R.string.home_open_sales))
         }
 
         Button(onClick = onOpenWarehouses) {

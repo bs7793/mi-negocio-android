@@ -10,3 +10,11 @@
 - Cada pantalla/feature vive bajo `app/src/main/java/.../ui/<nombre>/` con **paquete en minúsculas** (p. ej. `superapps.minegocio.ui.categoriesscreen`).
 - En esa carpeta va **todo lo específico** de la pantalla: modelo, acceso a datos (o mini-repositorio), cliente Supabase cuando la pantalla lo necesite (provider singleton + `BuildConfig`), ViewModel y composables.
 - Navegación: rutas en un solo sitio (p. ej. objeto `*NavRoutes`); textos de UI en `strings.xml`; accesibilidad (`contentDescription`) en iconos y acciones relevantes.
+
+## Contract safety híbrida (obligatorio)
+
+- Cada pantalla es dueña de sus contratos: DTOs (`@Serializable`), fixtures y tests; no compartir fixtures entre pantallas aunque usen el mismo RPC.
+- Fixtures por pantalla en `app/src/test/resources/contracts/<screen>/` y tests por pantalla en `app/src/test/java/.../ui/<screen>/`.
+- Todo cambio en shape de respuesta de RPC o en reglas de negocio SQL debe actualizar fixtures/tests de las pantallas afectadas en el mismo cambio.
+- Antes de commit, ejecutar `.\scripts\verify-contracts.ps1` (valida JSON fixtures, corre tests de contrato y `assembleDebug`).
+- CI requerido: mantener `.github/workflows/contracts.yml` pasando para poder mergear.

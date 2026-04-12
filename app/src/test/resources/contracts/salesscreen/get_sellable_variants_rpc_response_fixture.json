@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "variant_id": 11,
+      "product_id": 5,
+      "product_name": "Colombian Coffee",
+      "sku": "COF-250G",
+      "barcode": "7701234567890",
+      "unit_price": 12.5,
+      "cost_price": 8.1,
+      "stock_total": 17.75,
+      "options": [
+        {
+          "type": "Size",
+          "value": "250g"
+        }
+      ]
+    }
+  ]
+}

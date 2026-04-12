@@ -1,0 +1,21 @@
+{
+  "option_types": [
+    {
+      "id": 10,
+      "name": "Size",
+      "input_kind": "select",
+      "values": [
+        {
+          "id": 101,
+          "value": "250g",
+          "sort_order": 1
+        },
+        {
+          "id": 102,
+          "value": "1kg",
+          "sort_order": 2
+        }
+      ]
+    }
+  ]
+}

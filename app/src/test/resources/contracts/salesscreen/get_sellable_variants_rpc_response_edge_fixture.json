@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "variant_id": 12,
+      "product_id": 5,
+      "product_name": "Colombian Coffee",
+      "sku": "COF-1KG",
+      "barcode": null,
+      "unit_price": 0.0,
+      "cost_price": null,
+      "stock_total": 0.0,
+      "options": []
+    }
+  ]
+}

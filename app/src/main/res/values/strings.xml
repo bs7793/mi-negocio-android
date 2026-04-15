@@ -69,6 +69,7 @@
     <string name="products_total_label">%1$d products</string>
     <string name="products_variants_count_label">%1$d variants</string>
     <string name="products_stock_total_label">Stock: %1$.3f</string>
+    <string name="products_list_image_content_description">Image for %1$s</string>
     <string name="products_add_sheet_title">New product</string>
     <string name="products_add_sheet_subtitle">Create a product with one or more sellable variants.</string>
     <string name="products_field_name">Product name</string>

@@ -1,19 +1,23 @@
 package superapps.minegocio.ui.productsscreen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -36,10 +40,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import superapps.minegocio.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,51 +274,93 @@ fun ProductsScreen(
                             key = { it.productId },
                         ) { product ->
                             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                Column(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top,
                                 ) {
-                                    Text(
-                                        text = product.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    if (!product.categoryName.isNullOrBlank()) {
-                                        Text(
-                                            text = product.categoryName,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    val imageModifier = Modifier
+                                        .size(88.dp)
+                                        .clip(MaterialTheme.shapes.medium)
+                                    if (!product.imageUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = product.imageUrl,
+                                            contentDescription = stringResource(
+                                                R.string.products_list_image_content_description,
+                                                product.name,
+                                            ),
+                                            modifier = imageModifier,
+                                            contentScale = ContentScale.Crop,
                                         )
+                                    } else {
+                                        Box(
+                                            modifier = imageModifier.background(MaterialTheme.colorScheme.surfaceVariant),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Image,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
+
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .fillMaxHeight(),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.products_variants_count_label, product.variantsCount),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.products_stock_total_label, product.totalStock),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                    }
-                                    product.variants.take(3).forEach { variant ->
-                                        val options = variant.options.joinToString(" / ") { "${it.type}: ${it.value}" }
-                                        Text(
-                                            text = if (options.isBlank()) {
-                                                "${variant.sku} · ${variant.unitPrice}"
-                                            } else {
-                                                "${variant.sku} · ${variant.unitPrice} · $options"
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            text = product.name,
+                                            style = MaterialTheme.typography.titleMedium,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis,
                                         )
+                                        if (!product.categoryName.isNullOrBlank()) {
+                                            Text(
+                                                text = product.categoryName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = stringResource(
+                                                    R.string.products_variants_count_label,
+                                                    product.variantsCount,
+                                                ),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                            Text(
+                                                text = stringResource(
+                                                    R.string.products_stock_total_label,
+                                                    product.totalStock,
+                                                ),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        product.variants.take(3).forEach { variant ->
+                                            val options = variant.options.joinToString(" / ") {
+                                                "${it.type}: ${it.value}"
+                                            }
+                                            Text(
+                                                text = if (options.isBlank()) {
+                                                    "${variant.sku} · ${variant.unitPrice}"
+                                                } else {
+                                                    "${variant.sku} · ${variant.unitPrice} · $options"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -341,4 +390,3 @@ fun ProductsScreen(
         )
     }
 }
-

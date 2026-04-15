@@ -9,6 +9,8 @@ data class Product(
     val productId: Long,
     val name: String,
     val description: String? = null,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
     @SerialName("category_id")
     val categoryId: Long? = null,
     @SerialName("category_name")
@@ -32,8 +34,15 @@ data class ProductsListResponse(
 data class CreateProductPayload(
     val name: String,
     val description: String? = null,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
     @SerialName("category_id")
     val categoryId: Long? = null,
     val variants: List<ProductVariantInput>,
 )
 
+data class ProductImageUpload(
+    val bytes: ByteArray,
+    val mimeType: String,
+    val fileExtension: String,
+)

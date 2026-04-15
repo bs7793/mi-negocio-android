@@ -333,8 +333,8 @@ fun ProductsScreen(
                 isCreateSheetOpen = false
                 createSubmitAttempted = false
             },
-            onCreateProduct = { payload ->
-                viewModel.createProduct(payload)
+            onCreateProduct = { payload, imageUpload ->
+                viewModel.createProduct(payload, imageUpload)
                 createSubmitAttempted = true
             },
             onClearError = { viewModel.clearCreateError() },

@@ -14,6 +14,10 @@ class ProductsContractsTest {
         )
         assertEquals(1, response.total)
         assertEquals("Orange Juice", response.items.first().name)
+        assertEquals(
+            "https://example.com/storage/v1/object/public/product-images/products/sample.jpg",
+            response.items.first().imageUrl,
+        )
     }
 
     @Test

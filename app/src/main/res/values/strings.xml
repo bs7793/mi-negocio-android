@@ -78,6 +78,16 @@
     <string name="products_field_description_placeholder">Add an optional description</string>
     <string name="products_field_category">Category</string>
     <string name="products_category_none">No category</string>
+    <string name="products_image_section_title">Product image</string>
+    <string name="products_image_section_subtitle">Choose an image from gallery or take a photo with the camera.</string>
+    <string name="products_image_action_take_photo">Take photo</string>
+    <string name="products_image_action_choose_gallery">Choose from gallery</string>
+    <string name="products_image_action_remove">Remove image</string>
+    <string name="products_image_preview_description">Selected product image preview</string>
+    <string name="products_image_processing">Preparing image...</string>
+    <string name="products_image_error_permission">Camera permission is required to take photos.</string>
+    <string name="products_image_error_create_uri">Could not create a temporary photo file.</string>
+    <string name="products_image_error_process">Could not read the selected image. Try again.</string>
     <string name="products_variants_section_title">Variants</string>
     <string name="products_variant_label">Variant %1$d</string>
     <string name="products_field_sku">SKU</string>

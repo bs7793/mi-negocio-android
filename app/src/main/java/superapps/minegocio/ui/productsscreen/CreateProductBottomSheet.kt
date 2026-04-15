@@ -1,5 +1,11 @@
 package superapps.minegocio.ui.productsscreen
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,18 +29,31 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import superapps.minegocio.R
 import superapps.minegocio.ui.categoriesscreen.Category
 import superapps.minegocio.ui.warehousesscreen.Warehouse
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 private data class VariantDraft(
     val sku: String = "",
@@ -59,9 +78,11 @@ fun CreateProductBottomSheet(
     isSubmitting: Boolean,
     errorMessage: String?,
     onDismissRequest: () -> Unit,
-    onCreateProduct: (CreateProductPayload) -> Unit,
+    onCreateProduct: (CreateProductPayload, ProductImageUpload?) -> Unit,
     onClearError: () -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
     var productName by remember { mutableStateOf("") }
     var productDescription by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
@@ -71,6 +92,74 @@ fun CreateProductBottomSheet(
     var typeMenuIndexOpen by remember { mutableStateOf<Int?>(null) }
     var valueMenuIndexOpen by remember { mutableStateOf<Int?>(null) }
     var localOptionTypes by remember(optionTypesCatalog) { mutableStateOf(optionTypesCatalog) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedImageUpload by remember { mutableStateOf<ProductImageUpload?>(null) }
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    var isPreparingImage by remember { mutableStateOf(false) }
+    var imageErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        imageErrorMessage = null
+        scope.launch {
+            isPreparingImage = true
+            val imageUpload = withContext(Dispatchers.IO) { createProductImageUpload(context, uri) }
+            if (imageUpload == null) {
+                selectedImageUpload = null
+                imageErrorMessage = context.getString(R.string.products_image_error_process)
+            } else {
+                selectedImageUri = uri
+                selectedImageUpload = imageUpload
+                if (errorMessage != null) onClearError()
+            }
+            isPreparingImage = false
+        }
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+    ) { success ->
+        if (!success) {
+            cameraImageUri = null
+            return@rememberLauncherForActivityResult
+        }
+        val capturedUri = cameraImageUri ?: return@rememberLauncherForActivityResult
+        imageErrorMessage = null
+        scope.launch {
+            isPreparingImage = true
+            val imageUpload = withContext(Dispatchers.IO) { createProductImageUpload(context, capturedUri) }
+            if (imageUpload == null) {
+                selectedImageUpload = null
+                imageErrorMessage = context.getString(R.string.products_image_error_process)
+            } else {
+                selectedImageUri = capturedUri
+                selectedImageUpload = imageUpload
+                if (errorMessage != null) onClearError()
+            }
+            isPreparingImage = false
+        }
+    }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            imageErrorMessage = context.getString(R.string.products_image_error_permission)
+            return@rememberLauncherForActivityResult
+        }
+        val uri = createTempImageUri(context)
+        if (uri == null) {
+            imageErrorMessage = context.getString(R.string.products_image_error_create_uri)
+            return@rememberLauncherForActivityResult
+        }
+        cameraImageUri = uri
+        cameraLauncher.launch(uri)
+    }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage == null) return@LaunchedEffect
+        imageErrorMessage = null
+    }
 
     val isProductNameInvalid = submitAttempted && productName.isBlank()
     val hasVariantErrors = submitAttempted && variants.any { variant ->
@@ -171,6 +260,85 @@ fun CreateProductBottomSheet(
                             },
                         )
                     }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.products_image_section_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = stringResource(R.string.products_image_section_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            imageErrorMessage = null
+                            if (hasCameraPermission(context)) {
+                                val uri = createTempImageUri(context)
+                                if (uri == null) {
+                                    imageErrorMessage =
+                                        context.getString(R.string.products_image_error_create_uri)
+                                } else {
+                                    cameraImageUri = uri
+                                    cameraLauncher.launch(uri)
+                                }
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isSubmitting && !isPreparingImage,
+                    ) {
+                        Text(stringResource(R.string.products_image_action_take_photo))
+                    }
+                    Button(
+                        onClick = {
+                            imageErrorMessage = null
+                            galleryPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isSubmitting && !isPreparingImage,
+                    ) {
+                        Text(stringResource(R.string.products_image_action_choose_gallery))
+                    }
+                }
+                if (selectedImageUri != null) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = stringResource(R.string.products_image_preview_description),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                    )
+                    Button(
+                        onClick = {
+                            selectedImageUri = null
+                            selectedImageUpload = null
+                        },
+                        enabled = !isSubmitting && !isPreparingImage,
+                    ) {
+                        Text(stringResource(R.string.products_image_action_remove))
+                    }
+                }
+                if (isPreparingImage) {
+                    Text(
+                        text = stringResource(R.string.products_image_processing),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (!imageErrorMessage.isNullOrBlank()) {
+                    Text(
+                        text = imageErrorMessage.orEmpty(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
 
@@ -535,9 +703,9 @@ fun CreateProductBottomSheet(
                         variants = variants,
                         warehouses = warehouses,
                     ) ?: return@Button
-                    onCreateProduct(payload)
+                    onCreateProduct(payload, selectedImageUpload)
                 },
-                enabled = !isSubmitting,
+                enabled = !isSubmitting && !isPreparingImage,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
@@ -623,6 +791,86 @@ private fun buildPayloadOrNull(
     )
 }
 
+private fun hasCameraPermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.CAMERA,
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun createTempImageUri(context: Context): Uri? {
+    return try {
+        val imageDir = File(context.cacheDir, "product_images").apply { mkdirs() }
+        val imageFile = File.createTempFile("product_", ".jpg", imageDir)
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            imageFile,
+        )
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun createProductImageUpload(
+    context: Context,
+    uri: Uri,
+): ProductImageUpload? {
+    val resolver = context.contentResolver
+    val rawBytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+    if (rawBytes.isEmpty()) return null
+
+    val mimeType = resolver.getType(uri).orEmpty()
+    val isMimeTypeSupported = mimeType in SUPPORTED_MIME_TYPES
+    val shouldTranscode = rawBytes.size > MAX_UPLOAD_IMAGE_BYTES || !isMimeTypeSupported
+    val normalizedBytes = if (shouldTranscode) compressAsJpeg(rawBytes) ?: return null else rawBytes
+    val normalizedMimeType = if (shouldTranscode) "image/jpeg" else normalizeMimeType(mimeType)
+    val normalizedExtension = if (shouldTranscode) "jpg" else mimeTypeToExtension(mimeType)
+
+    return ProductImageUpload(
+        bytes = normalizedBytes,
+        mimeType = normalizedMimeType,
+        fileExtension = normalizedExtension,
+    )
+}
+
+private fun compressAsJpeg(rawBytes: ByteArray): ByteArray? {
+    val decodeBounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, decodeBounds)
+    var inSampleSize = 1
+    while (
+        decodeBounds.outWidth / inSampleSize > MAX_IMAGE_DIMENSION ||
+        decodeBounds.outHeight / inSampleSize > MAX_IMAGE_DIMENSION
+    ) {
+        inSampleSize *= 2
+    }
+    val bitmap = BitmapFactory.decodeByteArray(
+        rawBytes,
+        0,
+        rawBytes.size,
+        BitmapFactory.Options().apply { this.inSampleSize = inSampleSize.coerceAtLeast(1) },
+    ) ?: return null
+    val output = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_COMPRESSION_QUALITY, output)
+    bitmap.recycle()
+    return output.toByteArray()
+}
+
+private fun normalizeMimeType(rawMimeType: String): String {
+    return when {
+        rawMimeType.startsWith("image/") -> rawMimeType
+        else -> "image/jpeg"
+    }
+}
+
+private fun mimeTypeToExtension(rawMimeType: String): String {
+    return when (rawMimeType.lowercase()) {
+        "image/png" -> "png"
+        "image/webp" -> "webp"
+        else -> "jpg"
+    }
+}
+
 /** True when non-blank after trim but not a valid non-negative number. */
 private fun isCostPriceDraftInvalid(costPriceDraft: String): Boolean {
     val trimmed = costPriceDraft.trim()
@@ -630,4 +878,9 @@ private fun isCostPriceDraftInvalid(costPriceDraft: String): Boolean {
     val value = trimmed.toDoubleOrNull() ?: return true
     return value < 0
 }
+
+private const val MAX_UPLOAD_IMAGE_BYTES = 2_000_000
+private const val MAX_IMAGE_DIMENSION = 1600
+private const val JPEG_COMPRESSION_QUALITY = 82
+private val SUPPORTED_MIME_TYPES = setOf("image/jpeg", "image/png", "image/webp")
 

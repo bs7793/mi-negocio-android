@@ -13,6 +13,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 
 class ProductsRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
@@ -74,15 +75,50 @@ class ProductsRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
-    suspend fun createProduct(payload: CreateProductPayload): Product = withContext(Dispatchers.IO) {
+    suspend fun createProduct(
+        payload: CreateProductPayload,
+        imageUpload: ProductImageUpload? = null,
+    ): Product = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val payloadWithImage = if (imageUpload != null) {
+            payload.copy(imageUrl = uploadProductImage(imageUpload))
+        } else {
+            payload
+        }
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_product_with_variants"
-        val body = json.encodeToString(CreateProductRpcPayload(payload = payload))
+        val body = json.encodeToString(CreateProductRpcPayload(payload = payloadWithImage))
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to create product (${result.code})"))
         }
         return@withContext json.decodeFromString(result.body)
+    }
+
+    private suspend fun uploadProductImage(imageUpload: ProductImageUpload): String {
+        val objectPath = buildStorageObjectPath(imageUpload.fileExtension)
+        val endpoint = "${SupabaseProvider.supabaseUrl}/storage/v1/object/$PRODUCT_IMAGES_BUCKET/$objectPath"
+        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+        val first = executeBinary(
+            endpoint = endpoint,
+            accessToken = token,
+            bytes = imageUpload.bytes,
+            mimeType = imageUpload.mimeType,
+        )
+        val result = if (first.code == 401) {
+            val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+            executeBinary(
+                endpoint = endpoint,
+                accessToken = refreshed,
+                bytes = imageUpload.bytes,
+                mimeType = imageUpload.mimeType,
+            )
+        } else {
+            first
+        }
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to upload product image (${result.code})"))
+        }
+        return "${SupabaseProvider.supabaseUrl}/storage/v1/object/public/$PRODUCT_IMAGES_BUCKET/$objectPath"
     }
 
     private suspend fun get(endpoint: String): HttpResult {
@@ -133,6 +169,38 @@ class ProductsRepository(
             connection.disconnect()
         }
     }
+
+    private fun executeBinary(
+        endpoint: String,
+        accessToken: String,
+        bytes: ByteArray,
+        mimeType: String,
+    ): HttpResult {
+        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 10000
+            readTimeout = 15000
+            doOutput = true
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("apikey", SupabaseProvider.anonKey)
+            setRequestProperty("Authorization", "Bearer $accessToken")
+            setRequestProperty("x-upsert", "true")
+            setRequestProperty("Content-Type", mimeType)
+        }
+        try {
+            connection.outputStream.use { out -> out.write(bytes) }
+            val code = connection.responseCode
+            val responseBody = readBody(connection, code in 200..299)
+            return HttpResult(code, responseBody)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun buildStorageObjectPath(fileExtension: String): String {
+        val sanitizedExtension = fileExtension.lowercase().ifBlank { "jpg" }
+        return "products/${System.currentTimeMillis()}-${UUID.randomUUID()}.$sanitizedExtension"
+    }
 }
 
 private data class HttpResult(
@@ -171,4 +239,6 @@ private data class CreateProductRpcPayload(
     @kotlinx.serialization.SerialName("p_payload")
     val payload: CreateProductPayload,
 )
+
+private const val PRODUCT_IMAGES_BUCKET = "product-images"
 

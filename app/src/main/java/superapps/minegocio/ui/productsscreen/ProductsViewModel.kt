@@ -124,11 +124,14 @@ class ProductsViewModel(
         refreshProducts()
     }
 
-    fun createProduct(payload: CreateProductPayload) {
+    fun createProduct(
+        payload: CreateProductPayload,
+        imageUpload: ProductImageUpload? = null,
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingProduct = true, createErrorMessage = null) }
             try {
-                repository.createProduct(payload)
+                repository.createProduct(payload, imageUpload)
                 val refreshed = repository.fetchProducts(
                     search = _uiState.value.searchQuery,
                     categoryId = _uiState.value.selectedCategoryId,

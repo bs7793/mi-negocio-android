@@ -31,11 +31,6 @@ import androidx.navigation.compose.rememberNavController
 import superapps.minegocio.R
 import superapps.minegocio.ui.reportsscreen.dailycashclosure.DailyCashClosureScreen
 
-private object ReportsRoutes {
-    const val HUB = "reports_hub"
-    const val DAILY_CASH_CLOSURE = "daily_cash_closure"
-}
-
 private data class ReportModule(
     val id: String,
     val title: String,
@@ -51,15 +46,15 @@ fun ReportsScreen(
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = ReportsRoutes.HUB,
+        startDestination = ReportsNavRoutes.HUB,
         modifier = modifier.fillMaxSize(),
     ) {
-        composable(ReportsRoutes.HUB) {
+        composable(ReportsNavRoutes.HUB) {
             ReportsHubContent(
                 onOpenReport = { route -> navController.navigate(route) },
             )
         }
-        composable(ReportsRoutes.DAILY_CASH_CLOSURE) {
+        composable(ReportsNavRoutes.DAILY_CASH_CLOSURE) {
             DailyCashClosureScreen(
                 onNavigateUp = { navController.popBackStack() },
             )
@@ -78,7 +73,7 @@ private fun ReportsHubContent(
             title = stringResource(R.string.reports_daily_cash_closure_title),
             description = stringResource(R.string.reports_daily_cash_closure_description),
             icon = Icons.Default.Assessment,
-            route = ReportsRoutes.DAILY_CASH_CLOSURE,
+            route = ReportsNavRoutes.DAILY_CASH_CLOSURE,
         ),
     )
     Scaffold(

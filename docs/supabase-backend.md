@@ -14,6 +14,7 @@ Este documento resume **qué hace el SQL del repo** y **por qué** existen las p
 | `20260405000004_grant_app_schema_and_secure_workspace_rpc.sql` | Permisos al schema **`app`**; **`get_my_primary_workspace_id`** como **única entrada segura** (`SECURITY DEFINER`, solo `auth.uid()`); revoca llamadas públicas a `ensure_personal_workspace` con UUID arbitrario. |
 | `20260405000005_fix_rls_recursion_membership_helpers.sql` | Evita **recursión infinita** en políticas RLS que leían `workspace_memberships` bajo RLS; helpers con **definer** / bypass donde aplica. |
 | `20260411000000_create_warehouses_table_rls.sql` | Tabla **`warehouses`** por `workspace_id` (mismo modelo RLS que `categories`: lectura miembro, escritura editor/admin según política); índice único por workspace + nombre; **`purge_expired_anonymous_trial_data`** también borra `warehouses` de usuarios anónimos expirados. |
+| `20260415000000_extend_trial_purge_to_sales.sql` | Extiende `purge_expired_anonymous_trial_data` para borrar también `sales` de usuarios anónimos expirados (incluye cascada de `sale_lines` y `sale_payments`). |
 
 Aplicar migraciones en el **mismo orden** en tu proyecto Supabase (CLI o SQL).
 
@@ -42,7 +43,8 @@ Aplicar migraciones en el **mismo orden** en tu proyecto Supabase (CLI o SQL).
 
 ### `public.purge_expired_anonymous_trial_data()`
 
-- **Qué borra:** filas de `categories`, **`warehouses`** y `workspace_memberships` asociadas a usuarios **anónimos** en `auth.users` con **`created_at` anterior a ~30 días**; luego `workspaces` sin membresías.
+- **Qué borra:** filas de `categories`, **`warehouses`**, **`sales`** y `workspace_memberships` asociadas a usuarios **anónimos** en `auth.users` con **`created_at` anterior a ~30 días**; luego `workspaces` sin membresías.
+- **Detalle ventas:** al borrar `sales`, también se eliminan `sale_lines` y `sale_payments` por `ON DELETE CASCADE`.
 - **No se ejecuta sola:** hay que **programarla** (pg_cron, Supabase Scheduler, job con `service_role`, etc.). La app **no** la invoca.
 - Detalle: `supabase/functions/README.md`.
 

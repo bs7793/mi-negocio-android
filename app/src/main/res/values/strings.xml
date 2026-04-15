@@ -141,4 +141,19 @@
     <string name="sales_decrement_qty_cd">Decrease quantity</string>
     <string name="sales_increment_qty_cd">Increase quantity</string>
     <string name="sales_remove_item_cd">Remove item from ticket</string>
+    <string name="reports_screen_title">Reports</string>
+    <string name="reports_daily_cash_closure_title">Daily cash closure</string>
+    <string name="reports_daily_cash_closure_description">Visual summary of today\'s sold units and money.</string>
+    <string name="reports_daily_cash_closure_subtitle">Daily register balancing report</string>
+    <string name="reports_date_value">Date: %1$s</string>
+    <string name="reports_warehouse_value">Warehouse: %1$s</string>
+    <string name="reports_daily_totals_title">Today\'s totals</string>
+    <string name="reports_sales_count_value">Sales: %1$d</string>
+    <string name="reports_units_sold_value">Units sold: %1$.3f</string>
+    <string name="reports_gross_total_value">Gross total: %1$.2f</string>
+    <string name="reports_daily_breakdown_title">Payment breakdown</string>
+    <string name="reports_cash_total_value">Cash: %1$.2f</string>
+    <string name="reports_card_total_value">Card: %1$.2f</string>
+    <string name="reports_transfer_total_value">Transfer: %1$.2f</string>
+    <string name="reports_other_total_value">Other: %1$.2f</string>
 </resources>

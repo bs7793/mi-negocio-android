@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.productsscreen.ProductsScreen
+import superapps.minegocio.ui.reportsscreen.ReportsScreen
 import superapps.minegocio.ui.salesscreen.SalesScreen
 import superapps.minegocio.ui.warehousesscreen.WarehousesScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
@@ -204,6 +206,11 @@ fun MyApplicationApp() {
                         modifier = contentModifier,
                     )
                 }
+                AppDestinations.REPORTS -> {
+                    ReportsScreen(
+                        modifier = contentModifier,
+                    )
+                }
                 else -> Greeting(
                     name = "Android",
                     modifier = contentModifier,
@@ -219,6 +226,7 @@ enum class AppDestinations(
 ) {
     HOME("Home", Icons.Default.Home),
     SALES("Sales", Icons.Default.ShoppingCart),
+    REPORTS("Reports", Icons.Default.Assessment),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
 

@@ -56,4 +56,19 @@
     <string name="sales_decrement_qty_cd">Diminuir quantidade</string>
     <string name="sales_increment_qty_cd">Aumentar quantidade</string>
     <string name="sales_remove_item_cd">Remover item do ticket</string>
+    <string name="reports_screen_title">Relatórios</string>
+    <string name="reports_daily_cash_closure_title">Fechamento diário de caixa</string>
+    <string name="reports_daily_cash_closure_description">Resumo visual das unidades e do dinheiro vendido hoje.</string>
+    <string name="reports_daily_cash_closure_subtitle">Relatório diário para fechar o caixa</string>
+    <string name="reports_date_value">Data: %1$s</string>
+    <string name="reports_warehouse_value">Depósito: %1$s</string>
+    <string name="reports_daily_totals_title">Totais de hoje</string>
+    <string name="reports_sales_count_value">Vendas: %1$d</string>
+    <string name="reports_units_sold_value">Unidades vendidas: %1$.3f</string>
+    <string name="reports_gross_total_value">Total bruto: %1$.2f</string>
+    <string name="reports_daily_breakdown_title">Desdobramento por forma de pagamento</string>
+    <string name="reports_cash_total_value">Dinheiro: %1$.2f</string>
+    <string name="reports_card_total_value">Cartão: %1$.2f</string>
+    <string name="reports_transfer_total_value">Transferência: %1$.2f</string>
+    <string name="reports_other_total_value">Outro: %1$.2f</string>
 </resources>

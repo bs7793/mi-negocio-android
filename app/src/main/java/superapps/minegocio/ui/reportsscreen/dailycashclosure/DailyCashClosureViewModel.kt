@@ -8,23 +8,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import superapps.minegocio.ui.salesscreen.SalesDailySummary
-import superapps.minegocio.ui.salesscreen.SalesRepository
-import superapps.minegocio.ui.warehousesscreen.Warehouse
 import java.time.Clock
 import java.time.LocalDate
 
 data class DailyCashClosureUiState(
     val isLoading: Boolean = true,
-    val warehouses: List<Warehouse> = emptyList(),
+    val warehouses: List<DailyCashClosureWarehouse> = emptyList(),
     val selectedWarehouseId: Long? = null,
-    val summary: SalesDailySummary = SalesDailySummary(),
+    val summary: DailyCashClosureSummary = DailyCashClosureSummary(),
     val reportDate: LocalDate = LocalDate.now(),
     val errorMessage: String? = null,
 )
 
 class DailyCashClosureViewModel(
-    private val repository: SalesRepository = SalesRepository(),
+    private val repository: DailyCashClosureRepository = DailyCashClosureRepository(),
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel() {
 

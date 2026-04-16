@@ -13,9 +13,6 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class SalesRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
@@ -48,27 +45,6 @@ class SalesRepository(
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to fetch variants (${result.code})"))
-        }
-        return@withContext json.decodeFromString(result.body)
-    }
-
-    suspend fun fetchDailySummary(
-        warehouseId: Long?,
-        zoneId: ZoneId = ZoneId.systemDefault(),
-    ): SalesDailySummary = withContext(Dispatchers.IO) {
-        SupabaseProvider.assertConfigured()
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_sales_daily_summary"
-        val dailyRange = calculateLocalDayRange(zoneId)
-        val body = json.encodeToString(
-            GetSalesDailySummaryPayload(
-                warehouseId = warehouseId,
-                startAt = dailyRange.startAt,
-                endAt = dailyRange.endAt,
-            ),
-        )
-        val result = post(endpoint, body)
-        if (result.code !in 200..299) {
-            throw IOException(parseSupabaseError(result.body, "Failed to fetch sales summary (${result.code})"))
         }
         return@withContext json.decodeFromString(result.body)
     }
@@ -187,19 +163,6 @@ private fun parseSupabaseError(rawBody: String, fallback: String): String {
     return message ?: fallback
 }
 
-private data class DailyRange(
-    val startAt: String,
-    val endAt: String,
-)
-
-private fun calculateLocalDayRange(zoneId: ZoneId): DailyRange {
-    val today = LocalDate.now(zoneId)
-    val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-    val start = today.atStartOfDay(zoneId).toOffsetDateTime().format(formatter)
-    val end = today.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime().format(formatter)
-    return DailyRange(startAt = start, endAt = end)
-}
-
 @Serializable
 private data class GetSellableVariantsPayload(
     @SerialName("p_search")
@@ -208,16 +171,6 @@ private data class GetSellableVariantsPayload(
     val limit: Int = 30,
     @SerialName("p_warehouse_id")
     val warehouseId: Long? = null,
-)
-
-@Serializable
-private data class GetSalesDailySummaryPayload(
-    @SerialName("p_warehouse_id")
-    val warehouseId: Long? = null,
-    @SerialName("p_start_at")
-    val startAt: String? = null,
-    @SerialName("p_end_at")
-    val endAt: String? = null,
 )
 
 @Serializable

@@ -31,24 +31,6 @@ class SalesContractsTest {
     }
 
     @Test
-    fun `decode get_sales_daily_summary happy fixture`() {
-        val summary = ContractFixtureLoader.decode<SalesDailySummary>(
-            "contracts/salesscreen/get_sales_daily_summary_rpc_response_fixture.json",
-        )
-        assertEquals(4, summary.salesCount)
-        assertEquals(245.5, summary.grossTotal, 0.0001)
-    }
-
-    @Test
-    fun `decode get_sales_daily_summary edge fixture`() {
-        val summary = ContractFixtureLoader.decode<SalesDailySummary>(
-            "contracts/salesscreen/get_sales_daily_summary_rpc_response_edge_fixture.json",
-        )
-        assertEquals(0, summary.salesCount)
-        assertEquals(0.0, summary.grossTotal, 0.0001)
-    }
-
-    @Test
     fun `decode create_sale_with_lines_and_payments happy fixture`() {
         val created = ContractFixtureLoader.decode<SaleCreateResponse>(
             "contracts/salesscreen/create_sale_with_lines_and_payments_rpc_response_fixture.json",

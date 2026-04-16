@@ -71,20 +71,3 @@ data class SaleCreateResponse(
     val changeTotal: Double,
 )
 
-@Serializable
-data class SalesDailySummary(
-    @SerialName("sales_count")
-    val salesCount: Int = 0,
-    @SerialName("units_sold")
-    val unitsSold: Double = 0.0,
-    @SerialName("gross_total")
-    val grossTotal: Double = 0.0,
-    @SerialName("cash_total")
-    val cashTotal: Double = 0.0,
-    @SerialName("card_total")
-    val cardTotal: Double = 0.0,
-    @SerialName("transfer_total")
-    val transferTotal: Double = 0.0,
-    @SerialName("other_total")
-    val otherTotal: Double = 0.0,
-)

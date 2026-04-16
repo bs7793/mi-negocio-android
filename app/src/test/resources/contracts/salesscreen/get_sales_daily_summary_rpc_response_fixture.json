@@ -1,9 +1,0 @@
-{
-  "sales_count": 4,
-  "units_sold": 16.75,
-  "gross_total": 245.5,
-  "cash_total": 100.0,
-  "card_total": 95.5,
-  "transfer_total": 30.0,
-  "other_total": 20.0
-}

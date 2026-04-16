@@ -23,7 +23,6 @@ data class SalesUiState(
     val customerNameInput: String = "Public",
     val notesInput: String = "",
     val paymentDraft: SalesPaymentDraft = SalesPaymentDraft(),
-    val dailySummary: SalesDailySummary = SalesDailySummary(),
     val errorMessage: String? = null,
     val successMessage: String? = null,
 ) {
@@ -54,16 +53,13 @@ class SalesViewModel(
                         warehouseId = selectedWarehouseId,
                     )
                 }
-                val summaryDeferred = async { repository.fetchDailySummary(selectedWarehouseId) }
                 val variants = variantsDeferred.await()
-                val summary = summaryDeferred.await()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         warehouses = warehouses,
                         selectedWarehouseId = selectedWarehouseId,
                         variants = variants.items,
-                        dailySummary = summary,
                         paymentDraft = it.paymentDraft.copy(amountInput = formatAmount(it.cartTotal)),
                     )
                 }
@@ -137,14 +133,11 @@ class SalesViewModel(
                         warehouseId = warehouseId,
                     )
                 }
-                val summaryDeferred = async { repository.fetchDailySummary(warehouseId) }
                 val variants = variantsDeferred.await()
-                val summary = summaryDeferred.await()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         variants = variants.items,
-                        dailySummary = summary,
                     )
                 }
             } catch (e: Exception) {
@@ -353,10 +346,7 @@ class SalesViewModel(
                         warehouseId = warehouseId,
                     )
                 }
-                val summaryDeferred = async { repository.fetchDailySummary(warehouseId) }
-
                 val refreshedVariants = variantsDeferred.await()
-                val summary = summaryDeferred.await()
 
                 _uiState.update {
                     it.copy(
@@ -364,7 +354,6 @@ class SalesViewModel(
                         variants = refreshedVariants.items,
                         cartItems = emptyList(),
                         paymentDraft = it.paymentDraft.copy(amountInput = "", reference = ""),
-                        dailySummary = summary,
                         errorMessage = null,
                         successMessage = "Sale #${response.saleId} completed.",
                     )

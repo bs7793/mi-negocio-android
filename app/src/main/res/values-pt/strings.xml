@@ -26,9 +26,6 @@
     <string name="sales_warehouse_label">Depósito</string>
     <string name="sales_select_warehouse_label">Selecionar depósito</string>
     <string name="sales_select_warehouse_placeholder">Escolha um depósito</string>
-    <string name="sales_daily_summary_title">Prévia do fechamento diário</string>
-    <string name="sales_daily_summary_totals">Vendas: %1$d  Unidades: %2$.3f  Total: %3$.2f</string>
-    <string name="sales_daily_summary_breakdown">Dinheiro: %1$.2f  Cartão: %2$.2f  Transferência: %3$.2f  Outro: %4$.2f</string>
     <string name="sales_products_section_title">Catálogo de venda rápida</string>
     <string name="sales_search_empty_message">Nenhuma variante vendável encontrada. Aqui aparecem apenas produtos com variantes ativas.</string>
     <string name="sales_clear_search_action">Limpar busca</string>

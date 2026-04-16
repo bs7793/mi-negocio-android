@@ -26,9 +26,6 @@
     <string name="sales_warehouse_label">Bodega</string>
     <string name="sales_select_warehouse_label">Seleccionar bodega</string>
     <string name="sales_select_warehouse_placeholder">Elige una bodega</string>
-    <string name="sales_daily_summary_title">Vista previa del cierre diario</string>
-    <string name="sales_daily_summary_totals">Ventas: %1$d  Unidades: %2$.3f  Total: %3$.2f</string>
-    <string name="sales_daily_summary_breakdown">Efectivo: %1$.2f  Tarjeta: %2$.2f  Transferencia: %3$.2f  Otro: %4$.2f</string>
     <string name="sales_products_section_title">Catálogo de venta rápida</string>
     <string name="sales_search_empty_message">No se encontraron variantes vendibles. Aquí solo aparecen productos con variantes activas.</string>
     <string name="sales_clear_search_action">Limpiar búsqueda</string>

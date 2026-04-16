@@ -145,10 +145,6 @@ fun SalesScreen(
                 }
             }
 
-            item {
-                DailySummaryCard(summary = uiState.dailySummary)
-            }
-
             if (uiState.errorMessage != null) {
                 item {
                     Text(
@@ -314,44 +310,6 @@ fun SalesScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DailySummaryCard(summary: SalesDailySummary) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.sales_daily_summary_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(
-                    R.string.sales_daily_summary_totals,
-                    summary.salesCount,
-                    summary.unitsSold,
-                    summary.grossTotal,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(
-                    R.string.sales_daily_summary_breakdown,
-                    summary.cashTotal,
-                    summary.cardTotal,
-                    summary.transferTotal,
-                    summary.otherTotal,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

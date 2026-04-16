@@ -11,14 +11,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
@@ -142,80 +140,74 @@ fun MyApplicationApp() {
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            val contentModifier = Modifier.padding(innerPadding)
-            when (currentDestination) {
-                AppDestinations.HOME -> {
-                    val navController = rememberNavController()
-                    NavHost(
-                        navController = navController,
-                        startDestination = HomeNavRoutes.HOME,
-                        modifier = contentModifier,
-                    ) {
-                        composable(HomeNavRoutes.HOME) {
-                            HomeScreen(
-                                authUiState = authUiState,
-                                onSignInWithGoogle = {
-                                    if (!hasValidWebClientId) {
-                                        authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
-                                    } else {
-                                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
-                                    }
-                                },
-                                onSignOut = { authViewModel.signOutAndContinueAnonymously() },
-                                onDismissAuthError = { authViewModel.clearError() },
-                                onOpenProducts = {
-                                    navController.navigate(HomeNavRoutes.PRODUCTS)
-                                },
-                                onOpenSales = {
-                                    navController.navigate(HomeNavRoutes.SALES)
-                                },
-                                onOpenCategories = {
-                                    navController.navigate(HomeNavRoutes.CATEGORIES)
-                                },
-                                onOpenWarehouses = {
-                                    navController.navigate(HomeNavRoutes.WAREHOUSES)
-                                },
-                            )
-                        }
-                        composable(HomeNavRoutes.CATEGORIES) {
-                            CategoriesScreen(
-                                onNavigateUp = { navController.popBackStack() },
-                            )
-                        }
-                        composable(HomeNavRoutes.PRODUCTS) {
-                            ProductsScreen(
-                                onNavigateUp = { navController.popBackStack() },
-                            )
-                        }
-                        composable(HomeNavRoutes.WAREHOUSES) {
-                            WarehousesScreen(
-                                onNavigateUp = { navController.popBackStack() },
-                            )
-                        }
-                        composable(HomeNavRoutes.SALES) {
-                            SalesScreen(
-                                onNavigateUp = { navController.popBackStack() },
-                            )
-                        }
+        when (currentDestination) {
+            AppDestinations.HOME -> {
+                val navController = rememberNavController()
+                NavHost(
+                    navController = navController,
+                    startDestination = HomeNavRoutes.HOME,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    composable(HomeNavRoutes.HOME) {
+                        HomeScreen(
+                            authUiState = authUiState,
+                            onSignInWithGoogle = {
+                                if (!hasValidWebClientId) {
+                                    authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
+                                } else {
+                                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                }
+                            },
+                            onSignOut = { authViewModel.signOutAndContinueAnonymously() },
+                            onDismissAuthError = { authViewModel.clearError() },
+                            onOpenProducts = {
+                                navController.navigate(HomeNavRoutes.PRODUCTS)
+                            },
+                            onOpenSales = {
+                                navController.navigate(HomeNavRoutes.SALES)
+                            },
+                            onOpenCategories = {
+                                navController.navigate(HomeNavRoutes.CATEGORIES)
+                            },
+                            onOpenWarehouses = {
+                                navController.navigate(HomeNavRoutes.WAREHOUSES)
+                            },
+                        )
+                    }
+                    composable(HomeNavRoutes.CATEGORIES) {
+                        CategoriesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(HomeNavRoutes.PRODUCTS) {
+                        ProductsScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(HomeNavRoutes.WAREHOUSES) {
+                        WarehousesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(HomeNavRoutes.SALES) {
+                        SalesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
                     }
                 }
-                AppDestinations.SALES -> {
-                    SalesScreen(
-                        onNavigateUp = { currentDestination = AppDestinations.HOME },
-                        modifier = contentModifier,
-                    )
-                }
-                AppDestinations.REPORTS -> {
-                    ReportsScreen(
-                        modifier = contentModifier,
-                    )
-                }
-                else -> Greeting(
-                    name = "Android",
-                    modifier = contentModifier,
+            }
+            AppDestinations.SALES -> {
+                SalesScreen(
+                    onNavigateUp = { currentDestination = AppDestinations.HOME },
                 )
             }
+            AppDestinations.REPORTS -> {
+                ReportsScreen()
+            }
+            else -> Greeting(
+                name = "Android",
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }

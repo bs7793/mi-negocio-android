@@ -132,6 +132,8 @@
     <string name="sales_search_empty_message">No sellable variants found. Only products with active variants are shown here.</string>
     <string name="sales_clear_search_action">Clear search</string>
     <string name="sales_cart_section_title">Cart</string>
+    <string name="sales_step_cart_title">Products</string>
+    <string name="sales_step_payment_title">Payment</string>
     <string name="sales_cart_empty">No items in the cart yet.</string>
     <string name="sales_customer_label">Customer (optional)</string>
     <string name="sales_notes_label">Notes (optional)</string>
@@ -139,6 +141,7 @@
     <string name="sales_payment_amount_label">Payment amount</string>
     <string name="sales_payment_reference_label">Payment reference (optional)</string>
     <string name="sales_total_label">Total: %1$.2f</string>
+    <string name="sales_continue_to_payment_action">Continue · Total %1$.2f</string>
     <string name="sales_checkout_processing">Processing sale...</string>
     <string name="sales_checkout_action">Charge and save sale</string>
     <string name="sales_variant_details">SKU: %1$s  Stock: %2$.3f  Price: %3$.2f</string>

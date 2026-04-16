@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,6 +52,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import superapps.minegocio.R
+import superapps.minegocio.ui.warehousesscreen.Warehouse
+
+private enum class SaleStep {
+    Cart,
+    Payment,
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,16 +68,40 @@ fun SalesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var warehouseMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var step by rememberSaveable { mutableStateOf(SaleStep.Cart) }
 
-    BackHandler(onBack = onNavigateUp)
+    val navigateBack: () -> Unit = {
+        if (step == SaleStep.Payment) {
+            step = SaleStep.Cart
+        } else {
+            onNavigateUp()
+        }
+    }
+
+    BackHandler(onBack = navigateBack)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.sales_screen_title)) },
+                title = {
+                    Column {
+                        Text(text = stringResource(R.string.sales_screen_title))
+                        Text(
+                            text = stringResource(
+                                id = if (step == SaleStep.Cart) {
+                                    R.string.sales_step_cart_title
+                                } else {
+                                    R.string.sales_step_payment_title
+                                },
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
+                    IconButton(onClick = navigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_navigate_up),
@@ -79,237 +110,388 @@ fun SalesScreen(
                 },
             )
         },
+        bottomBar = {
+            SalesBottomBar(
+                step = step,
+                cartTotal = uiState.cartTotal,
+                hasCartItems = uiState.cartItems.isNotEmpty(),
+                isSubmitting = uiState.isSubmitting,
+                onContinue = { step = SaleStep.Payment },
+                onCheckout = viewModel::checkout,
+            )
+        },
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = viewModel::setSearchQuery,
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(R.string.sales_search_label)) },
-                        placeholder = { Text(stringResource(R.string.sales_search_placeholder)) },
-                        singleLine = true,
-                    )
-                    Button(onClick = { viewModel.searchVariants() }) {
-                        Text(stringResource(R.string.sales_search_action))
-                    }
-                }
+        when (step) {
+            SaleStep.Cart -> {
+                CartStepContent(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = viewModel::setSearchQuery,
+                    onSearch = viewModel::searchVariants,
+                    warehouses = uiState.warehouses,
+                    selectedWarehouseId = uiState.selectedWarehouseId,
+                    warehouseMenuOpen = warehouseMenuOpen,
+                    onWarehouseMenuOpenChange = { warehouseMenuOpen = it },
+                    onSelectWarehouse = viewModel::selectWarehouse,
+                    errorMessage = uiState.errorMessage,
+                    successMessage = uiState.successMessage,
+                    isLoading = uiState.isLoading,
+                    variants = uiState.variants,
+                    hasSearched = uiState.hasSearched,
+                    onClearSearch = viewModel::clearSearchAndReload,
+                    onAddVariant = viewModel::addVariantToCart,
+                    cartItems = uiState.cartItems,
+                    onIncrement = viewModel::incrementQuantity,
+                    onDecrement = viewModel::decrementQuantity,
+                    onRemove = viewModel::removeFromCart,
+                    onQuantityChange = viewModel::updateQuantity,
+                    onUnitPriceChange = viewModel::updateUnitPrice,
+                )
             }
 
-            item {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    val selectedWarehouseName = uiState.warehouses
-                        .firstOrNull { it.id == uiState.selectedWarehouseId }
-                        ?.name
-                        ?: stringResource(R.string.sales_select_warehouse_placeholder)
-                    OutlinedTextField(
-                        value = selectedWarehouseName,
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.sales_warehouse_label)) },
-                        trailingIcon = {
-                            IconButton(onClick = { warehouseMenuOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.sales_select_warehouse_label),
-                                )
-                            }
-                        },
-                    )
-                    DropdownMenu(
-                        expanded = warehouseMenuOpen,
-                        onDismissRequest = { warehouseMenuOpen = false },
-                    ) {
-                        uiState.warehouses.forEach { warehouse ->
-                            DropdownMenuItem(
-                                text = { Text(warehouse.name) },
-                                onClick = {
-                                    warehouseMenuOpen = false
-                                    viewModel.selectWarehouse(warehouse.id)
-                                },
+            SaleStep.Payment -> {
+                PaymentStepContent(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    errorMessage = uiState.errorMessage,
+                    successMessage = uiState.successMessage,
+                    customerNameInput = uiState.customerNameInput,
+                    onCustomerNameChange = viewModel::updateCustomerName,
+                    notesInput = uiState.notesInput,
+                    onNotesChange = viewModel::updateNotes,
+                    paymentMethod = uiState.paymentDraft.method,
+                    onPaymentMethodSelect = viewModel::updatePaymentMethod,
+                    paymentAmount = uiState.paymentDraft.amountInput,
+                    onPaymentAmountChange = viewModel::updatePaymentAmount,
+                    paymentReference = uiState.paymentDraft.reference,
+                    onPaymentReferenceChange = viewModel::updatePaymentReference,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SalesBottomBar(
+    step: SaleStep,
+    cartTotal: Double,
+    hasCartItems: Boolean,
+    isSubmitting: Boolean,
+    onContinue: () -> Unit,
+    onCheckout: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (step == SaleStep.Cart) {
+            Button(
+                onClick = onContinue,
+                enabled = hasCartItems,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.sales_continue_to_payment_action, cartTotal))
+            }
+        } else {
+            Button(
+                onClick = onCheckout,
+                enabled = !isSubmitting && hasCartItems,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = if (isSubmitting) {
+                        stringResource(R.string.sales_checkout_processing)
+                    } else {
+                        stringResource(R.string.sales_checkout_action)
+                    },
+                )
+            }
+            Text(
+                text = stringResource(R.string.sales_total_label, cartTotal),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CartStepContent(
+    modifier: Modifier = Modifier,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    warehouses: List<Warehouse>,
+    selectedWarehouseId: Long?,
+    warehouseMenuOpen: Boolean,
+    onWarehouseMenuOpenChange: (Boolean) -> Unit,
+    onSelectWarehouse: (Long) -> Unit,
+    errorMessage: String?,
+    successMessage: String?,
+    isLoading: Boolean,
+    variants: List<SellableVariant>,
+    hasSearched: Boolean,
+    onClearSearch: () -> Unit,
+    onAddVariant: (SellableVariant) -> Unit,
+    cartItems: List<SaleCartItem>,
+    onIncrement: (Long) -> Unit,
+    onDecrement: (Long) -> Unit,
+    onRemove: (Long) -> Unit,
+    onQuantityChange: (Long, String) -> Unit,
+    onUnitPriceChange: (Long, String) -> Unit,
+) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 8.dp),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.sales_search_label)) },
+                    placeholder = { Text(stringResource(R.string.sales_search_placeholder)) },
+                    singleLine = true,
+                )
+                Button(onClick = onSearch) {
+                    Text(stringResource(R.string.sales_search_action))
+                }
+            }
+        }
+
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                val selectedWarehouseName = warehouses
+                    .firstOrNull { it.id == selectedWarehouseId }
+                    ?.name
+                    ?: stringResource(R.string.sales_select_warehouse_placeholder)
+                OutlinedTextField(
+                    value = selectedWarehouseName,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.sales_warehouse_label)) },
+                    trailingIcon = {
+                        IconButton(onClick = { onWarehouseMenuOpenChange(true) }) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = stringResource(R.string.sales_select_warehouse_label),
                             )
                         }
-                    }
-                }
-            }
-
-            if (uiState.errorMessage != null) {
-                item {
-                    Text(
-                        text = uiState.errorMessage.orEmpty(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-            if (uiState.successMessage != null) {
-                item {
-                    Text(
-                        text = uiState.successMessage.orEmpty(),
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-
-            item {
-                Text(
-                    text = stringResource(R.string.sales_products_section_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    },
                 )
-            }
-
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 20.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else if (uiState.variants.isEmpty()) {
-                item {
-                    NoSellableVariantsState(
-                        hasSearched = uiState.hasSearched,
-                        onClearSearch = viewModel::clearSearchAndReload,
-                    )
-                }
-            } else {
-                items(
-                    items = uiState.variants,
-                    key = { "catalog-${it.variantId}" },
-                ) { variant ->
-                    SellableVariantCard(
-                        modifier = Modifier.heightIn(max = 180.dp),
-                        variant = variant,
-                        onAdd = { viewModel.addVariantToCart(variant) },
-                    )
-                }
-            }
-
-            item {
-                Text(
-                    text = stringResource(R.string.sales_cart_section_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
-            if (uiState.cartItems.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.sales_cart_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                items(
-                    items = uiState.cartItems,
-                    key = { "cart-${it.variant.variantId}" },
-                ) { item ->
-                    CartItemCard(
-                        item = item,
-                        onIncrement = { viewModel.incrementQuantity(item.variant.variantId) },
-                        onDecrement = { viewModel.decrementQuantity(item.variant.variantId) },
-                        onRemove = { viewModel.removeFromCart(item.variant.variantId) },
-                        onQuantityChange = { viewModel.updateQuantity(item.variant.variantId, it) },
-                        onUnitPriceChange = { viewModel.updateUnitPrice(item.variant.variantId, it) },
-                    )
-                }
-            }
-
-            item {
-                OutlinedTextField(
-                    value = uiState.customerNameInput,
-                    onValueChange = viewModel::updateCustomerName,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.sales_customer_label)) },
-                    singleLine = true,
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = uiState.notesInput,
-                    onValueChange = viewModel::updateNotes,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.sales_notes_label)) },
-                    singleLine = true,
-                )
-            }
-
-            item {
-                Text(
-                    text = stringResource(R.string.sales_payment_method_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            item {
-                PaymentMethodSelector(
-                    selected = uiState.paymentDraft.method,
-                    onSelect = viewModel::updatePaymentMethod,
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = uiState.paymentDraft.amountInput,
-                    onValueChange = viewModel::updatePaymentAmount,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.sales_payment_amount_label)) },
-                    singleLine = true,
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = uiState.paymentDraft.reference,
-                    onValueChange = viewModel::updatePaymentReference,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.sales_payment_reference_label)) },
-                    singleLine = true,
-                )
-            }
-
-            item {
-                Text(
-                    text = stringResource(R.string.sales_total_label, uiState.cartTotal),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            item {
-                Button(
-                    onClick = { viewModel.checkout() },
-                    enabled = !uiState.isSubmitting && uiState.cartItems.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
+                DropdownMenu(
+                    expanded = warehouseMenuOpen,
+                    onDismissRequest = { onWarehouseMenuOpenChange(false) },
                 ) {
-                    Text(
-                        text = if (uiState.isSubmitting) {
-                            stringResource(R.string.sales_checkout_processing)
-                        } else {
-                            stringResource(R.string.sales_checkout_action)
-                        },
-                    )
+                    warehouses.forEach { warehouse ->
+                        DropdownMenuItem(
+                            text = { Text(warehouse.name) },
+                            onClick = {
+                                onWarehouseMenuOpenChange(false)
+                                onSelectWarehouse(warehouse.id)
+                            },
+                        )
+                    }
                 }
             }
+        }
+
+        if (errorMessage != null) {
+            item {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (successMessage != null) {
+            item {
+                Text(
+                    text = successMessage,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        item {
+            Text(
+                text = stringResource(R.string.sales_products_section_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else if (variants.isEmpty()) {
+            item {
+                NoSellableVariantsState(
+                    hasSearched = hasSearched,
+                    onClearSearch = onClearSearch,
+                )
+            }
+        } else {
+            items(
+                items = variants,
+                key = { "catalog-${it.variantId}" },
+            ) { variant ->
+                SellableVariantCard(
+                    modifier = Modifier.heightIn(max = 180.dp),
+                    variant = variant,
+                    onAdd = { onAddVariant(variant) },
+                )
+            }
+        }
+
+        item {
+            Text(
+                text = stringResource(R.string.sales_cart_section_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        if (cartItems.isEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.sales_cart_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(
+                items = cartItems,
+                key = { "cart-${it.variant.variantId}" },
+            ) { item ->
+                CartItemCard(
+                    item = item,
+                    onIncrement = { onIncrement(item.variant.variantId) },
+                    onDecrement = { onDecrement(item.variant.variantId) },
+                    onRemove = { onRemove(item.variant.variantId) },
+                    onQuantityChange = { onQuantityChange(item.variant.variantId, it) },
+                    onUnitPriceChange = { onUnitPriceChange(item.variant.variantId, it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentStepContent(
+    modifier: Modifier = Modifier,
+    errorMessage: String?,
+    successMessage: String?,
+    customerNameInput: String,
+    onCustomerNameChange: (String) -> Unit,
+    notesInput: String,
+    onNotesChange: (String) -> Unit,
+    paymentMethod: String,
+    onPaymentMethodSelect: (String) -> Unit,
+    paymentAmount: String,
+    onPaymentAmountChange: (String) -> Unit,
+    paymentReference: String,
+    onPaymentReferenceChange: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 8.dp),
+    ) {
+        if (errorMessage != null) {
+            item {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (successMessage != null) {
+            item {
+                Text(
+                    text = successMessage,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = customerNameInput,
+                onValueChange = onCustomerNameChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.sales_customer_label)) },
+                singleLine = true,
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = notesInput,
+                onValueChange = onNotesChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.sales_notes_label)) },
+                singleLine = true,
+            )
+        }
+
+        item {
+            Text(
+                text = stringResource(R.string.sales_payment_method_label),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        item {
+            PaymentMethodSelector(
+                selected = paymentMethod,
+                onSelect = onPaymentMethodSelect,
+            )
+        }
+        item {
+            OutlinedTextField(
+                value = paymentAmount,
+                onValueChange = onPaymentAmountChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.sales_payment_amount_label)) },
+                singleLine = true,
+            )
+        }
+        item {
+            OutlinedTextField(
+                value = paymentReference,
+                onValueChange = onPaymentReferenceChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.sales_payment_reference_label)) },
+                singleLine = true,
+            )
         }
     }
 }

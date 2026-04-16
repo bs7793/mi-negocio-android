@@ -30,6 +30,8 @@
     <string name="sales_search_empty_message">Nenhuma variante vendável encontrada. Aqui aparecem apenas produtos com variantes ativas.</string>
     <string name="sales_clear_search_action">Limpar busca</string>
     <string name="sales_cart_section_title">Carrinho</string>
+    <string name="sales_step_cart_title">Produtos</string>
+    <string name="sales_step_payment_title">Pagamento</string>
     <string name="sales_cart_empty">Ainda não há itens no carrinho.</string>
     <string name="sales_customer_label">Cliente (opcional)</string>
     <string name="sales_notes_label">Notas (opcional)</string>
@@ -37,6 +39,7 @@
     <string name="sales_payment_amount_label">Valor pago</string>
     <string name="sales_payment_reference_label">Referência de pagamento (opcional)</string>
     <string name="sales_total_label">Total: %1$.2f</string>
+    <string name="sales_continue_to_payment_action">Continuar · Total %1$.2f</string>
     <string name="sales_checkout_processing">Processando venda...</string>
     <string name="sales_checkout_action">Cobrar e salvar venda</string>
     <string name="sales_variant_details">SKU: %1$s  Estoque: %2$.3f  Preço: %3$.2f</string>

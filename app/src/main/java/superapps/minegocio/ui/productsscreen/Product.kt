@@ -46,11 +46,11 @@ data class UpdateProductBasicPayload(
     @SerialName("product_id")
     val productId: Long,
     val name: String,
-    val description: String? = null,
+    val description: String?,
     @SerialName("image_url")
-    val imageUrl: String? = null,
+    val imageUrl: String?,
     @SerialName("category_id")
-    val categoryId: Long? = null,
+    val categoryId: Long?,
 )
 
 data class ProductImageUpload(

@@ -137,7 +137,6 @@ BEGIN
     AND POSITION('''variant_id''' IN v_function_body) > 0
     AND POSITION('''product_id''' IN v_function_body) > 0
     AND POSITION('''product_name''' IN v_function_body) > 0
-    AND POSITION('''image_url''' IN v_function_body) > 0
     AND POSITION('''sku''' IN v_function_body) > 0
     AND POSITION('''unit_price''' IN v_function_body) > 0
     AND POSITION('''stock_total''' IN v_function_body) > 0

@@ -1,4 +1,4 @@
-package superapps.minegocio.ui.home
+package superapps.minegocio.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -18,14 +18,10 @@ import superapps.minegocio.R
 import superapps.minegocio.ui.auth.AuthUiState
 
 @Composable
-fun HomeScreen(
+fun ProfileScreen(
     authUiState: AuthUiState,
-    onSignOut: () -> Unit,
+    onSignInWithGoogle: () -> Unit,
     onDismissAuthError: () -> Unit,
-    onOpenProducts: () -> Unit,
-    onOpenSales: () -> Unit,
-    onOpenCategories: () -> Unit,
-    onOpenWarehouses: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -35,7 +31,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = stringResource(R.string.home_title),
+            text = stringResource(R.string.profile_screen_title),
             style = MaterialTheme.typography.headlineSmall,
         )
 
@@ -58,12 +54,12 @@ fun HomeScreen(
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
         }
 
-        if (!authUiState.isAnonymous) {
+        if (authUiState.isAnonymous) {
             Button(
-                onClick = onSignOut,
+                onClick = onSignInWithGoogle,
                 enabled = !authUiState.isLoading,
             ) {
-                Text(text = stringResource(R.string.auth_action_sign_out))
+                Text(text = stringResource(R.string.auth_action_sign_in_google))
             }
         }
 
@@ -76,22 +72,6 @@ fun HomeScreen(
             TextButton(onClick = onDismissAuthError) {
                 Text(text = stringResource(R.string.auth_action_dismiss_error))
             }
-        }
-
-        Button(onClick = onOpenCategories) {
-            Text(text = stringResource(R.string.home_open_categories))
-        }
-
-        Button(onClick = onOpenProducts) {
-            Text(text = stringResource(R.string.home_open_products))
-        }
-
-        Button(onClick = onOpenSales) {
-            Text(text = stringResource(R.string.home_open_sales))
-        }
-
-        Button(onClick = onOpenWarehouses) {
-            Text(text = stringResource(R.string.home_open_warehouses))
         }
     }
 }

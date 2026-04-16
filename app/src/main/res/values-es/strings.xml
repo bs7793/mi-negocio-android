@@ -20,7 +20,7 @@
     <string name="products_field_cost_price_invalid">Introduce un costo válido (0 o mayor) o déjalo en blanco</string>
     <string name="products_variant_validation_error">Cada variante requiere SKU, precio unitario válido, precio de costo opcional válido y selección de opciones completa.</string>
     <string name="sales_screen_title">Ventas</string>
-    <string name="sales_search_label">Buscar variantes vendibles</string>
+    <string name="sales_search_label">Buscar producto</string>
     <string name="sales_search_placeholder">Nombre del producto, SKU o código de barras</string>
     <string name="sales_search_action">Buscar</string>
     <string name="sales_warehouse_label">Bodega</string>
@@ -29,8 +29,8 @@
     <string name="sales_products_section_title">Catálogo de venta rápida</string>
     <string name="sales_search_empty_message">No se encontraron variantes vendibles. Aquí solo aparecen productos con variantes activas.</string>
     <string name="sales_clear_search_action">Limpiar búsqueda</string>
-    <string name="sales_cart_section_title">Ticket actual</string>
-    <string name="sales_cart_empty">Aún no hay productos en el ticket.</string>
+    <string name="sales_cart_section_title">Carrito</string>
+    <string name="sales_cart_empty">Aún no hay productos en el carrito.</string>
     <string name="sales_customer_label">Cliente (opcional)</string>
     <string name="sales_notes_label">Notas (opcional)</string>
     <string name="sales_payment_method_label">Método de pago</string>
@@ -49,10 +49,10 @@
     <string name="sales_payment_card">Tarjeta</string>
     <string name="sales_payment_transfer">Transferencia</string>
     <string name="sales_payment_other">Otro</string>
-    <string name="sales_add_to_cart_cd">Agregar al ticket de venta</string>
+    <string name="sales_add_to_cart_cd">Agregar al carrito</string>
     <string name="sales_decrement_qty_cd">Disminuir cantidad</string>
     <string name="sales_increment_qty_cd">Aumentar cantidad</string>
-    <string name="sales_remove_item_cd">Quitar producto del ticket</string>
+    <string name="sales_remove_item_cd">Quitar producto del carrito</string>
     <string name="reports_screen_title">Reportes</string>
     <string name="reports_daily_cash_closure_title">Cierre de caja diario</string>
     <string name="reports_daily_cash_closure_description">Resumen visual de unidades y dinero vendido hoy.</string>

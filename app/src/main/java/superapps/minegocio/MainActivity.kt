@@ -45,6 +45,7 @@ import superapps.minegocio.navigation.HomeNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.home.HomeScreen
+import superapps.minegocio.ui.profile.ProfileScreen
 import superapps.minegocio.ui.productsscreen.ProductsScreen
 import superapps.minegocio.ui.reportsscreen.ReportsScreen
 import superapps.minegocio.ui.salesscreen.SalesScreen
@@ -151,13 +152,6 @@ fun MyApplicationApp() {
                     composable(HomeNavRoutes.HOME) {
                         HomeScreen(
                             authUiState = authUiState,
-                            onSignInWithGoogle = {
-                                if (!hasValidWebClientId) {
-                                    authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
-                                } else {
-                                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
-                                }
-                            },
                             onSignOut = { authViewModel.signOutAndContinueAnonymously() },
                             onDismissAuthError = { authViewModel.clearError() },
                             onOpenProducts = {
@@ -204,10 +198,20 @@ fun MyApplicationApp() {
             AppDestinations.REPORTS -> {
                 ReportsScreen()
             }
-            else -> Greeting(
-                name = "Android",
-                modifier = Modifier.fillMaxSize(),
-            )
+            AppDestinations.PROFILE -> {
+                ProfileScreen(
+                    authUiState = authUiState,
+                    onSignInWithGoogle = {
+                        if (!hasValidWebClientId) {
+                            authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
+                        } else {
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
+                    },
+                    onDismissAuthError = { authViewModel.clearError() },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }

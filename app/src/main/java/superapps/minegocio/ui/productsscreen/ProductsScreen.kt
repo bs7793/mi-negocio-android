@@ -220,6 +220,19 @@ fun ProductsScreen(
             ) {
                 Text(stringResource(R.string.products_filter_action))
             }
+            if (!uiState.updateWarningMessage.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.products_update_cleanup_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = { viewModel.clearUpdateWarning() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.auth_action_dismiss_error))
+                }
+            }
 
             when {
                 uiState.isLoading -> {
@@ -289,6 +302,7 @@ fun ProductsScreen(
                                 onClick = {
                                     editingProduct = product
                                     viewModel.clearUpdateError()
+                                    viewModel.clearUpdateWarning()
                                 },
                             ) {
                                 Row(
@@ -417,8 +431,8 @@ fun ProductsScreen(
                 editingProduct = null
                 updateSubmitAttempted = false
             },
-            onUpdateProduct = { payload, imageUpload ->
-                viewModel.updateProduct(payload, imageUpload)
+            onUpdateProduct = { payload, imageUpload, previousImageUrl ->
+                viewModel.updateProduct(payload, imageUpload, previousImageUrl)
                 updateSubmitAttempted = true
             },
             onClearError = { viewModel.clearUpdateError() },

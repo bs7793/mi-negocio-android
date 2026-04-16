@@ -97,7 +97,8 @@ class ProductsRepository(
     suspend fun updateProductBasic(
         payload: UpdateProductBasicPayload,
         imageUpload: ProductImageUpload? = null,
-    ): Product = withContext(Dispatchers.IO) {
+        previousImageUrl: String? = null,
+    ): UpdateProductBasicResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
         val payloadWithImage = if (imageUpload != null) {
             payload.copy(imageUrl = uploadProductImage(imageUpload))
@@ -110,7 +111,15 @@ class ProductsRepository(
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to update product (${result.code})"))
         }
-        return@withContext json.decodeFromString(result.body)
+        val updatedProduct: Product = json.decodeFromString(result.body)
+        val cleanupWarning = cleanupPreviousImageIfNeeded(
+            previousImageUrl = previousImageUrl,
+            nextImageUrl = payloadWithImage.imageUrl,
+        )
+        return@withContext UpdateProductBasicResult(
+            product = updatedProduct,
+            cleanupWarning = cleanupWarning,
+        )
     }
 
     private suspend fun uploadProductImage(imageUpload: ProductImageUpload): String {
@@ -154,6 +163,42 @@ class ProductsRepository(
         if (first.code != 401) return first
         val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
         return execute(endpoint, "POST", refreshed, body)
+    }
+
+    private suspend fun delete(endpoint: String): HttpResult {
+        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+        val first = execute(endpoint, "DELETE", token, null)
+        if (first.code != 401) return first
+        val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+        return execute(endpoint, "DELETE", refreshed, null)
+    }
+
+    private suspend fun cleanupPreviousImageIfNeeded(
+        previousImageUrl: String?,
+        nextImageUrl: String?,
+    ): String? {
+        if (!shouldDeletePreviousImage(previousImageUrl, nextImageUrl)) return null
+        val previousUrl = previousImageUrl.orEmpty().trim()
+        val objectPath = extractStorageObjectPath(previousUrl) ?: return CLEANUP_WARNING_MESSAGE
+        val endpoint = "${SupabaseProvider.supabaseUrl}/storage/v1/object/$PRODUCT_IMAGES_BUCKET/$objectPath"
+        val result = delete(endpoint)
+        if (result.code in 200..299 || result.code == 404) return null
+        return parseSupabaseError(result.body, CLEANUP_WARNING_MESSAGE)
+    }
+
+    private fun shouldDeletePreviousImage(previousImageUrl: String?, nextImageUrl: String?): Boolean {
+        val previous = previousImageUrl?.trim().orEmpty()
+        if (previous.isBlank()) return false
+        val next = nextImageUrl?.trim().orEmpty()
+        return !previous.equals(next, ignoreCase = true)
+    }
+
+    private fun extractStorageObjectPath(publicUrl: String): String? {
+        if (publicUrl.isBlank()) return null
+        val prefix = "${SupabaseProvider.supabaseUrl}/storage/v1/object/public/$PRODUCT_IMAGES_BUCKET/"
+        if (!publicUrl.startsWith(prefix)) return null
+        val rawPath = publicUrl.removePrefix(prefix).trim()
+        return rawPath.takeIf { it.isNotBlank() }
     }
 
     private fun execute(
@@ -227,6 +272,11 @@ private data class HttpResult(
     val body: String,
 )
 
+data class UpdateProductBasicResult(
+    val product: Product,
+    val cleanupWarning: String? = null,
+)
+
 private fun readBody(connection: HttpURLConnection, isSuccess: Boolean): String {
     val stream = if (isSuccess) connection.inputStream else connection.errorStream
     if (stream == null) return ""
@@ -266,4 +316,5 @@ private data class UpdateProductBasicRpcPayload(
 )
 
 private const val PRODUCT_IMAGES_BUCKET = "product-images"
+private const val CLEANUP_WARNING_MESSAGE = "Product updated, but old image cleanup is pending."
 

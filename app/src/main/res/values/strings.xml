@@ -119,6 +119,7 @@
     <string name="products_edit_sheet_subtitle">Update basic information for this product.</string>
     <string name="products_action_save">Save changes</string>
     <string name="products_action_saving">Saving...</string>
+    <string name="products_update_cleanup_warning">Product saved, but the previous image could not be fully cleaned from storage.</string>
     <string name="sales_screen_title">Sales</string>
     <string name="sales_search_label">Search sellable variants</string>
     <string name="sales_search_placeholder">Product name, SKU, or barcode</string>

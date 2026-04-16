@@ -62,7 +62,11 @@ fun EditProductBottomSheet(
     isSubmitting: Boolean,
     errorMessage: String?,
     onDismissRequest: () -> Unit,
-    onUpdateProduct: (UpdateProductBasicPayload, ProductImageUpload?) -> Unit,
+    onUpdateProduct: (
+        payload: UpdateProductBasicPayload,
+        imageUpload: ProductImageUpload?,
+        previousImageUrl: String?,
+    ) -> Unit,
     onClearError: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -351,7 +355,11 @@ fun EditProductBottomSheet(
                         categoryId = selectedCategoryId,
                         imageUrl = if (selectedImageUpload != null) null else currentImageUrl,
                     )
-                    onUpdateProduct(payload, selectedImageUpload)
+                    onUpdateProduct(
+                        payload,
+                        selectedImageUpload,
+                        product.imageUrl,
+                    )
                 },
                 enabled = !isSubmitting && !isPreparingImage,
                 modifier = Modifier

@@ -1,6 +1,7 @@
 package superapps.minegocio.ui.salesscreen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
@@ -38,12 +41,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import superapps.minegocio.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -357,54 +363,81 @@ private fun SellableVariantCard(
     onAdd: () -> Unit,
 ) {
     ElevatedCard(modifier = modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = variant.productName,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(
-                    R.string.sales_variant_details,
-                    variant.sku,
-                    variant.stockTotal,
-                    variant.unitPrice,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (!variant.barcode.isNullOrBlank()) {
-                Text(
-                    text = stringResource(R.string.sales_variant_barcode, variant.barcode),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            val imageModifier = Modifier
+                .size(72.dp)
+                .clip(MaterialTheme.shapes.medium)
+            if (!variant.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = variant.imageUrl,
+                    contentDescription = stringResource(
+                        R.string.products_list_image_content_description,
+                        variant.productName,
+                    ),
+                    modifier = imageModifier,
+                    contentScale = ContentScale.Crop,
                 )
-            }
-            if (variant.options.isNotEmpty()) {
-                val optionsText = variant.options.joinToString(" / ") { "${it.type}: ${it.value}" }
-                Text(
-                    text = optionsText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(onClick = onAdd) {
+            } else {
+                Box(
+                    modifier = imageModifier.background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.sales_add_to_cart_cd),
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = variant.productName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.sales_variant_details,
+                        variant.sku,
+                        variant.stockTotal,
+                        variant.unitPrice,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (!variant.barcode.isNullOrBlank()) {
+                    Text(
+                        text = stringResource(R.string.sales_variant_barcode, variant.barcode),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (variant.options.isNotEmpty()) {
+                    val optionsText = variant.options.joinToString(" / ") { "${it.type}: ${it.value}" }
+                    Text(
+                        text = optionsText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            IconButton(onClick = onAdd) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.sales_add_to_cart_cd),
+                )
             }
         }
     }

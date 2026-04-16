@@ -11,6 +11,8 @@ data class SellableVariant(
     val productId: Long,
     @SerialName("product_name")
     val productName: String,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
     val sku: String,
     val barcode: String? = null,
     @SerialName("unit_price")

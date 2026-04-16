@@ -14,6 +14,10 @@ class SalesContractsTest {
         )
         assertTrue(response.items.isNotEmpty())
         assertEquals("Colombian Coffee", response.items.first().productName)
+        assertEquals(
+            "https://example.com/storage/v1/object/public/product-images/products/coffee-250g.jpg",
+            response.items.first().imageUrl,
+        )
     }
 
     @Test
@@ -23,6 +27,7 @@ class SalesContractsTest {
         )
         assertEquals(1, response.items.size)
         assertTrue(response.items.first().options.isEmpty())
+        assertEquals(null, response.items.first().imageUrl)
     }
 
     @Test

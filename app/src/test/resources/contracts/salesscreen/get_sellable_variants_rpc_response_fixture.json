@@ -4,6 +4,7 @@
       "variant_id": 11,
       "product_id": 5,
       "product_name": "Colombian Coffee",
+      "image_url": "https://example.com/storage/v1/object/public/product-images/products/coffee-250g.jpg",
       "sku": "COF-250G",
       "barcode": "7701234567890",
       "unit_price": 12.5,

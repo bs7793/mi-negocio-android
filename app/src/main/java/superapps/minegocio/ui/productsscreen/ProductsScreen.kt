@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -58,8 +59,10 @@ fun ProductsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isCreateSheetOpen by rememberSaveable { mutableStateOf(false) }
+    var editingProduct by remember { mutableStateOf<Product?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var createSubmitAttempted by rememberSaveable { mutableStateOf(false) }
+    var updateSubmitAttempted by rememberSaveable { mutableStateOf(false) }
     var selectedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedWarehouseId by rememberSaveable { mutableStateOf<Long?>(null) }
     var categoryMenuOpen by rememberSaveable { mutableStateOf(false) }
@@ -71,6 +74,14 @@ fun ProductsScreen(
                 isCreateSheetOpen = false
             }
             createSubmitAttempted = false
+        }
+    }
+    LaunchedEffect(updateSubmitAttempted, uiState.isUpdatingProduct, uiState.updateErrorMessage) {
+        if (updateSubmitAttempted && !uiState.isUpdatingProduct) {
+            if (uiState.updateErrorMessage == null) {
+                editingProduct = null
+            }
+            updateSubmitAttempted = false
         }
     }
 
@@ -273,7 +284,13 @@ fun ProductsScreen(
                             items = uiState.products,
                             key = { it.productId },
                         ) { product ->
-                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    editingProduct = product
+                                    viewModel.clearUpdateError()
+                                },
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -387,6 +404,24 @@ fun ProductsScreen(
                 createSubmitAttempted = true
             },
             onClearError = { viewModel.clearCreateError() },
+        )
+    }
+
+    editingProduct?.let { product ->
+        EditProductBottomSheet(
+            product = product,
+            categories = uiState.categories,
+            isSubmitting = uiState.isUpdatingProduct,
+            errorMessage = uiState.updateErrorMessage,
+            onDismissRequest = {
+                editingProduct = null
+                updateSubmitAttempted = false
+            },
+            onUpdateProduct = { payload, imageUpload ->
+                viewModel.updateProduct(payload, imageUpload)
+                updateSubmitAttempted = true
+            },
+            onClearError = { viewModel.clearUpdateError() },
         )
     }
 }

@@ -115,6 +115,10 @@
     <string name="products_variant_validation_error">Each variant requires SKU, valid unit price, valid optional cost price, and complete option selection.</string>
     <string name="products_action_add">Add product</string>
     <string name="products_action_creating">Creating...</string>
+    <string name="products_edit_sheet_title">Edit product</string>
+    <string name="products_edit_sheet_subtitle">Update basic information for this product.</string>
+    <string name="products_action_save">Save changes</string>
+    <string name="products_action_saving">Saving...</string>
     <string name="sales_screen_title">Sales</string>
     <string name="sales_search_label">Search sellable variants</string>
     <string name="sales_search_placeholder">Product name, SKU, or barcode</string>

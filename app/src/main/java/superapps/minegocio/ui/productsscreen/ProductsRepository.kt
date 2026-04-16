@@ -94,6 +94,25 @@ class ProductsRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
+    suspend fun updateProductBasic(
+        payload: UpdateProductBasicPayload,
+        imageUpload: ProductImageUpload? = null,
+    ): Product = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val payloadWithImage = if (imageUpload != null) {
+            payload.copy(imageUrl = uploadProductImage(imageUpload))
+        } else {
+            payload
+        }
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/update_product_basic"
+        val body = json.encodeToString(UpdateProductBasicRpcPayload(payload = payloadWithImage))
+        val result = post(endpoint, body)
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to update product (${result.code})"))
+        }
+        return@withContext json.decodeFromString(result.body)
+    }
+
     private suspend fun uploadProductImage(imageUpload: ProductImageUpload): String {
         val objectPath = buildStorageObjectPath(imageUpload.fileExtension)
         val endpoint = "${SupabaseProvider.supabaseUrl}/storage/v1/object/$PRODUCT_IMAGES_BUCKET/$objectPath"
@@ -238,6 +257,12 @@ private data class GetProductsListRpcPayload(
 private data class CreateProductRpcPayload(
     @kotlinx.serialization.SerialName("p_payload")
     val payload: CreateProductPayload,
+)
+
+@Serializable
+private data class UpdateProductBasicRpcPayload(
+    @kotlinx.serialization.SerialName("p_payload")
+    val payload: UpdateProductBasicPayload,
 )
 
 private const val PRODUCT_IMAGES_BUCKET = "product-images"

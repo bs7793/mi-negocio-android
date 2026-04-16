@@ -24,6 +24,8 @@ data class ProductsUiState(
     val errorMessage: String? = null,
     val isCreatingProduct: Boolean = false,
     val createErrorMessage: String? = null,
+    val isUpdatingProduct: Boolean = false,
+    val updateErrorMessage: String? = null,
 )
 
 class ProductsViewModel(
@@ -160,6 +162,42 @@ class ProductsViewModel(
 
     fun clearCreateError() {
         _uiState.update { it.copy(createErrorMessage = null) }
+    }
+
+    fun updateProduct(
+        payload: UpdateProductBasicPayload,
+        imageUpload: ProductImageUpload? = null,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingProduct = true, updateErrorMessage = null) }
+            try {
+                repository.updateProductBasic(payload, imageUpload)
+                val refreshed = repository.fetchProducts(
+                    search = _uiState.value.searchQuery,
+                    categoryId = _uiState.value.selectedCategoryId,
+                    warehouseId = _uiState.value.selectedWarehouseId,
+                )
+                _uiState.update {
+                    it.copy(
+                        isUpdatingProduct = false,
+                        updateErrorMessage = null,
+                        products = refreshed.items,
+                        total = refreshed.total,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isUpdatingProduct = false,
+                        updateErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearUpdateError() {
+        _uiState.update { it.copy(updateErrorMessage = null) }
     }
 }
 

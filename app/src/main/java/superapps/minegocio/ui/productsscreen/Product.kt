@@ -41,6 +41,18 @@ data class CreateProductPayload(
     val variants: List<ProductVariantInput>,
 )
 
+@Serializable
+data class UpdateProductBasicPayload(
+    @SerialName("product_id")
+    val productId: Long,
+    val name: String,
+    val description: String? = null,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
+    @SerialName("category_id")
+    val categoryId: Long? = null,
+)
+
 data class ProductImageUpload(
     val bytes: ByteArray,
     val mimeType: String,

@@ -28,7 +28,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +35,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -155,7 +153,7 @@ fun SalesScreen(
                 },
                 sheetState = paymentSheetState,
             ) {
-                PaymentMethodSheetContent(
+                PaymentMethodSheet(
                     selectedMethod = uiState.paymentDraft.method,
                     onSelectMethod = viewModel::updatePaymentMethod,
                     referenceInput = uiState.paymentDraft.reference,
@@ -446,69 +444,6 @@ private fun CustomerSummaryRow(
 }
 
 @Composable
-private fun PaymentMethodSheetContent(
-    selectedMethod: String,
-    onSelectMethod: (String) -> Unit,
-    referenceInput: String,
-    onReferenceChange: (String) -> Unit,
-    showReferenceField: Boolean,
-    onToggleReference: () -> Unit,
-    cartTotal: Double,
-    isSubmitting: Boolean,
-    errorMessage: String?,
-    onCharge: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.sales_payment_sheet_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        PaymentMethodSelector(
-            selected = selectedMethod,
-            onSelect = onSelectMethod,
-        )
-        TextButton(onClick = onToggleReference) {
-            Text(stringResource(R.string.sales_add_reference_action))
-        }
-        if (showReferenceField) {
-            OutlinedTextField(
-                value = referenceInput,
-                onValueChange = onReferenceChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.sales_payment_reference_label)) },
-                singleLine = true,
-            )
-        }
-        if (!errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Button(
-            onClick = onCharge,
-            enabled = !isSubmitting,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = if (isSubmitting) {
-                    stringResource(R.string.sales_checkout_processing)
-                } else {
-                    stringResource(R.string.sales_charge_action, cartTotal)
-                },
-            )
-        }
-    }
-}
-
-@Composable
 private fun CustomerSheetContent(
     customerName: String,
     onCustomerNameChange: (String) -> Unit,
@@ -739,52 +674,3 @@ private fun CartItemCard(
     }
 }
 
-@Composable
-private fun PaymentMethodSelector(
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        PaymentMethodChip(
-            method = "cash",
-            label = stringResource(R.string.sales_payment_cash),
-            selected = selected == "cash",
-            onSelect = onSelect,
-        )
-        PaymentMethodChip(
-            method = "card",
-            label = stringResource(R.string.sales_payment_card),
-            selected = selected == "card",
-            onSelect = onSelect,
-        )
-        PaymentMethodChip(
-            method = "transfer",
-            label = stringResource(R.string.sales_payment_transfer),
-            selected = selected == "transfer",
-            onSelect = onSelect,
-        )
-        PaymentMethodChip(
-            method = "other",
-            label = stringResource(R.string.sales_payment_other),
-            selected = selected == "other",
-            onSelect = onSelect,
-        )
-    }
-}
-
-@Composable
-private fun PaymentMethodChip(
-    method: String,
-    label: String,
-    selected: Boolean,
-    onSelect: (String) -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = { onSelect(method) },
-        label = { Text(label) },
-    )
-}

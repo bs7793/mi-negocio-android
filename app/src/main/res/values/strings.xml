@@ -143,6 +143,7 @@
     <string name="sales_total_label">Total: %1$.2f</string>
     <string name="sales_charge_action">Charge %1$.2f</string>
     <string name="sales_payment_sheet_title">Payment method</string>
+    <string name="sales_payment_sheet_hint">Select how the customer pays</string>
     <string name="sales_customer_sheet_title">Customer and notes</string>
     <string name="sales_add_customer_action">+ Add customer</string>
     <string name="sales_customer_summary_label">Customer: %1$s</string>

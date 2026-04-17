@@ -41,6 +41,7 @@
     <string name="sales_total_label">Total: %1$.2f</string>
     <string name="sales_charge_action">Cobrar %1$.2f</string>
     <string name="sales_payment_sheet_title">Método de pagamento</string>
+    <string name="sales_payment_sheet_hint">Selecione como o cliente paga</string>
     <string name="sales_customer_sheet_title">Cliente e notas</string>
     <string name="sales_add_customer_action">+ Adicionar cliente</string>
     <string name="sales_customer_summary_label">Cliente: %1$s</string>

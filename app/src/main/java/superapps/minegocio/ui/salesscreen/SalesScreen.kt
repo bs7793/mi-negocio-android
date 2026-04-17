@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -31,13 +32,17 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,13 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import superapps.minegocio.R
 import superapps.minegocio.ui.warehousesscreen.Warehouse
-
-private enum class SaleStep {
-    Cart,
-    Payment,
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,40 +69,34 @@ fun SalesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var warehouseMenuOpen by rememberSaveable { mutableStateOf(false) }
-    var step by rememberSaveable { mutableStateOf(SaleStep.Cart) }
+    var showPaymentSheet by rememberSaveable { mutableStateOf(false) }
+    var showCustomerSheet by rememberSaveable { mutableStateOf(false) }
+    var showReferenceField by rememberSaveable { mutableStateOf(false) }
+    val paymentSheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+    )
+    val customerSheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+    )
+    val coroutineScope = rememberCoroutineScope()
 
-    val navigateBack: () -> Unit = {
-        if (step == SaleStep.Payment) {
-            step = SaleStep.Cart
-        } else {
-            onNavigateUp()
+    BackHandler(onBack = onNavigateUp)
+
+    LaunchedEffect(uiState.successMessage, showPaymentSheet) {
+        if (showPaymentSheet && !uiState.successMessage.isNullOrBlank()) {
+            paymentSheetState.hide()
+            showPaymentSheet = false
+            showReferenceField = false
         }
     }
-
-    BackHandler(onBack = navigateBack)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text(text = stringResource(R.string.sales_screen_title))
-                        Text(
-                            text = stringResource(
-                                id = if (step == SaleStep.Cart) {
-                                    R.string.sales_step_cart_title
-                                } else {
-                                    R.string.sales_step_payment_title
-                                },
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+                title = { Text(stringResource(R.string.sales_screen_title)) },
                 navigationIcon = {
-                    IconButton(onClick = navigateBack) {
+                    IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_navigate_up),
@@ -111,65 +106,85 @@ fun SalesScreen(
             )
         },
         bottomBar = {
-            SalesBottomBar(
-                step = step,
+            SalesChargeBar(
                 cartTotal = uiState.cartTotal,
                 hasCartItems = uiState.cartItems.isNotEmpty(),
                 isSubmitting = uiState.isSubmitting,
-                onContinue = { step = SaleStep.Payment },
-                onCheckout = viewModel::checkout,
+                onCharge = {
+                    showPaymentSheet = true
+                    showReferenceField = false
+                },
             )
         },
     ) { innerPadding ->
-        when (step) {
-            SaleStep.Cart -> {
-                CartStepContent(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    searchQuery = uiState.searchQuery,
-                    onSearchQueryChange = viewModel::setSearchQuery,
-                    onSearch = viewModel::searchVariants,
-                    warehouses = uiState.warehouses,
-                    selectedWarehouseId = uiState.selectedWarehouseId,
-                    warehouseMenuOpen = warehouseMenuOpen,
-                    onWarehouseMenuOpenChange = { warehouseMenuOpen = it },
-                    onSelectWarehouse = viewModel::selectWarehouse,
+        CartStepContent(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            searchQuery = uiState.searchQuery,
+            onSearchQueryChange = viewModel::setSearchQuery,
+            onSearch = viewModel::searchVariants,
+            warehouses = uiState.warehouses,
+            selectedWarehouseId = uiState.selectedWarehouseId,
+            warehouseMenuOpen = warehouseMenuOpen,
+            onWarehouseMenuOpenChange = { warehouseMenuOpen = it },
+            onSelectWarehouse = viewModel::selectWarehouse,
+            errorMessage = uiState.errorMessage,
+            successMessage = uiState.successMessage,
+            isLoading = uiState.isLoading,
+            variants = uiState.variants,
+            hasSearched = uiState.hasSearched,
+            onClearSearch = viewModel::clearSearchAndReload,
+            onAddVariant = viewModel::addVariantToCart,
+            cartItems = uiState.cartItems,
+            customerNameInput = uiState.customerNameInput,
+            notesInput = uiState.notesInput,
+            onOpenCustomerSheet = { showCustomerSheet = true },
+            onIncrement = viewModel::incrementQuantity,
+            onDecrement = viewModel::decrementQuantity,
+            onRemove = viewModel::removeFromCart,
+            onQuantityChange = viewModel::updateQuantity,
+            onUnitPriceChange = viewModel::updateUnitPrice,
+        )
+        if (showPaymentSheet) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showPaymentSheet = false
+                    showReferenceField = false
+                },
+                sheetState = paymentSheetState,
+            ) {
+                PaymentMethodSheetContent(
+                    selectedMethod = uiState.paymentDraft.method,
+                    onSelectMethod = viewModel::updatePaymentMethod,
+                    referenceInput = uiState.paymentDraft.reference,
+                    onReferenceChange = viewModel::updatePaymentReference,
+                    showReferenceField = showReferenceField,
+                    onToggleReference = { showReferenceField = !showReferenceField },
+                    cartTotal = uiState.cartTotal,
+                    isSubmitting = uiState.isSubmitting,
                     errorMessage = uiState.errorMessage,
-                    successMessage = uiState.successMessage,
-                    isLoading = uiState.isLoading,
-                    variants = uiState.variants,
-                    hasSearched = uiState.hasSearched,
-                    onClearSearch = viewModel::clearSearchAndReload,
-                    onAddVariant = viewModel::addVariantToCart,
-                    cartItems = uiState.cartItems,
-                    onIncrement = viewModel::incrementQuantity,
-                    onDecrement = viewModel::decrementQuantity,
-                    onRemove = viewModel::removeFromCart,
-                    onQuantityChange = viewModel::updateQuantity,
-                    onUnitPriceChange = viewModel::updateUnitPrice,
+                    onCharge = viewModel::checkout,
                 )
             }
-
-            SaleStep.Payment -> {
-                PaymentStepContent(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    errorMessage = uiState.errorMessage,
-                    successMessage = uiState.successMessage,
-                    customerNameInput = uiState.customerNameInput,
+        }
+        if (showCustomerSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showCustomerSheet = false },
+                sheetState = customerSheetState,
+            ) {
+                CustomerSheetContent(
+                    customerName = uiState.customerNameInput,
                     onCustomerNameChange = viewModel::updateCustomerName,
-                    notesInput = uiState.notesInput,
+                    notes = uiState.notesInput,
                     onNotesChange = viewModel::updateNotes,
-                    paymentMethod = uiState.paymentDraft.method,
-                    onPaymentMethodSelect = viewModel::updatePaymentMethod,
-                    paymentAmount = uiState.paymentDraft.amountInput,
-                    onPaymentAmountChange = viewModel::updatePaymentAmount,
-                    paymentReference = uiState.paymentDraft.reference,
-                    onPaymentReferenceChange = viewModel::updatePaymentReference,
+                    onDone = {
+                        coroutineScope.launch {
+                            customerSheetState.hide()
+                            showCustomerSheet = false
+                        }
+                    },
                 )
             }
         }
@@ -177,46 +192,28 @@ fun SalesScreen(
 }
 
 @Composable
-private fun SalesBottomBar(
-    step: SaleStep,
+private fun SalesChargeBar(
     cartTotal: Double,
     hasCartItems: Boolean,
     isSubmitting: Boolean,
-    onContinue: () -> Unit,
-    onCheckout: () -> Unit,
+    onCharge: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (step == SaleStep.Cart) {
-            Button(
-                onClick = onContinue,
-                enabled = hasCartItems,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.sales_continue_to_payment_action, cartTotal))
-            }
-        } else {
-            Button(
-                onClick = onCheckout,
-                enabled = !isSubmitting && hasCartItems,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (isSubmitting) {
-                        stringResource(R.string.sales_checkout_processing)
-                    } else {
-                        stringResource(R.string.sales_checkout_action)
-                    },
-                )
-            }
+        Button(
+            onClick = onCharge,
+            enabled = hasCartItems && !isSubmitting,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Text(
-                text = stringResource(R.string.sales_total_label, cartTotal),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                text = if (isSubmitting) {
+                    stringResource(R.string.sales_checkout_processing)
+                } else {
+                    stringResource(R.string.sales_charge_action, cartTotal)
+                },
             )
         }
     }
@@ -241,6 +238,9 @@ private fun CartStepContent(
     onClearSearch: () -> Unit,
     onAddVariant: (SellableVariant) -> Unit,
     cartItems: List<SaleCartItem>,
+    customerNameInput: String,
+    notesInput: String,
+    onOpenCustomerSheet: () -> Unit,
     onIncrement: (Long) -> Unit,
     onDecrement: (Long) -> Unit,
     onRemove: (Long) -> Unit,
@@ -375,6 +375,13 @@ private fun CartStepContent(
                 fontWeight = FontWeight.SemiBold,
             )
         }
+        item {
+            CustomerSummaryRow(
+                customerName = customerNameInput,
+                notes = notesInput,
+                onOpenCustomerSheet = onOpenCustomerSheet,
+            )
+        }
 
         if (cartItems.isEmpty()) {
             item {
@@ -403,95 +410,142 @@ private fun CartStepContent(
 }
 
 @Composable
-private fun PaymentStepContent(
-    modifier: Modifier = Modifier,
-    errorMessage: String?,
-    successMessage: String?,
-    customerNameInput: String,
-    onCustomerNameChange: (String) -> Unit,
-    notesInput: String,
-    onNotesChange: (String) -> Unit,
-    paymentMethod: String,
-    onPaymentMethodSelect: (String) -> Unit,
-    paymentAmount: String,
-    onPaymentAmountChange: (String) -> Unit,
-    paymentReference: String,
-    onPaymentReferenceChange: (String) -> Unit,
+private fun CustomerSummaryRow(
+    customerName: String,
+    notes: String,
+    onOpenCustomerSheet: () -> Unit,
 ) {
-    LazyColumn(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(bottom = 8.dp),
-    ) {
-        if (errorMessage != null) {
-            item {
+    val hasNamedCustomer = customerName.isNotBlank() && !customerName.equals("Public", ignoreCase = true)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        AssistChip(
+            onClick = onOpenCustomerSheet,
+            label = {
                 Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = if (hasNamedCustomer) {
+                        stringResource(R.string.sales_customer_summary_label, customerName)
+                    } else {
+                        stringResource(R.string.sales_add_customer_action)
+                    },
                 )
-            }
-        }
-        if (successMessage != null) {
-            item {
-                Text(
-                    text = successMessage,
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodySmall,
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
                 )
-            }
-        }
-
-        item {
-            OutlinedTextField(
-                value = customerNameInput,
-                onValueChange = onCustomerNameChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.sales_customer_label)) },
-                singleLine = true,
-            )
-        }
-
-        item {
-            OutlinedTextField(
-                value = notesInput,
-                onValueChange = onNotesChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.sales_notes_label)) },
-                singleLine = true,
-            )
-        }
-
-        item {
+            },
+        )
+        if (notes.isNotBlank()) {
             Text(
-                text = stringResource(R.string.sales_payment_method_label),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = notes,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item {
-            PaymentMethodSelector(
-                selected = paymentMethod,
-                onSelect = onPaymentMethodSelect,
-            )
+    }
+}
+
+@Composable
+private fun PaymentMethodSheetContent(
+    selectedMethod: String,
+    onSelectMethod: (String) -> Unit,
+    referenceInput: String,
+    onReferenceChange: (String) -> Unit,
+    showReferenceField: Boolean,
+    onToggleReference: () -> Unit,
+    cartTotal: Double,
+    isSubmitting: Boolean,
+    errorMessage: String?,
+    onCharge: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.sales_payment_sheet_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        PaymentMethodSelector(
+            selected = selectedMethod,
+            onSelect = onSelectMethod,
+        )
+        TextButton(onClick = onToggleReference) {
+            Text(stringResource(R.string.sales_add_reference_action))
         }
-        item {
+        if (showReferenceField) {
             OutlinedTextField(
-                value = paymentAmount,
-                onValueChange = onPaymentAmountChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.sales_payment_amount_label)) },
-                singleLine = true,
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = paymentReference,
-                onValueChange = onPaymentReferenceChange,
+                value = referenceInput,
+                onValueChange = onReferenceChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.sales_payment_reference_label)) },
                 singleLine = true,
             )
+        }
+        if (!errorMessage.isNullOrBlank()) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Button(
+            onClick = onCharge,
+            enabled = !isSubmitting,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = if (isSubmitting) {
+                    stringResource(R.string.sales_checkout_processing)
+                } else {
+                    stringResource(R.string.sales_charge_action, cartTotal)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CustomerSheetContent(
+    customerName: String,
+    onCustomerNameChange: (String) -> Unit,
+    notes: String,
+    onNotesChange: (String) -> Unit,
+    onDone: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.sales_customer_sheet_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedTextField(
+            value = customerName,
+            onValueChange = onCustomerNameChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.sales_customer_label)) },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = notes,
+            onValueChange = onNotesChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.sales_notes_label)) },
+            singleLine = true,
+        )
+        Button(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.sales_save_customer_action))
         }
     }
 }

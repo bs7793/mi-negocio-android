@@ -141,6 +141,13 @@
     <string name="sales_payment_amount_label">Payment amount</string>
     <string name="sales_payment_reference_label">Payment reference (optional)</string>
     <string name="sales_total_label">Total: %1$.2f</string>
+    <string name="sales_charge_action">Charge %1$.2f</string>
+    <string name="sales_payment_sheet_title">Payment method</string>
+    <string name="sales_customer_sheet_title">Customer and notes</string>
+    <string name="sales_add_customer_action">+ Add customer</string>
+    <string name="sales_customer_summary_label">Customer: %1$s</string>
+    <string name="sales_add_reference_action">Add payment reference</string>
+    <string name="sales_save_customer_action">Save</string>
     <string name="sales_continue_to_payment_action">Continue · Total %1$.2f</string>
     <string name="sales_checkout_processing">Processing sale...</string>
     <string name="sales_checkout_action">Charge and save sale</string>

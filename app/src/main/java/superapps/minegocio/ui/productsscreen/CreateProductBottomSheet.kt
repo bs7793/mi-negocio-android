@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +50,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import superapps.minegocio.BuildConfig
 import superapps.minegocio.R
 import superapps.minegocio.ui.categoriesscreen.Category
 import superapps.minegocio.ui.warehousesscreen.Warehouse
@@ -190,6 +192,33 @@ fun CreateProductBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (BuildConfig.DEBUG) {
+                OutlinedButton(
+                    onClick = {
+                        submitAttempted = false
+                        typeMenuIndexOpen = null
+                        valueMenuIndexOpen = null
+                        isCategoryMenuOpen = false
+                        localOptionTypes = optionTypesCatalog
+                        productName = "Debug product ${System.currentTimeMillis()}"
+                        productDescription =
+                            "Dummy description for development and QA. Safe to delete."
+                        selectedCategoryId = categories.firstOrNull()?.id
+                        variants = listOf(
+                            buildDummyVariantDraft(
+                                warehouses = warehouses,
+                                optionTypesCatalog = optionTypesCatalog,
+                            ),
+                        )
+                        if (errorMessage != null) onClearError()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSubmitting && !isPreparingImage,
+                ) {
+                    Text(stringResource(R.string.products_debug_fill_dummy_data))
+                }
+            }
 
             OutlinedTextField(
                 value = productName,
@@ -727,6 +756,29 @@ fun CreateProductBottomSheet(
             }
         }
     }
+}
+
+private fun buildDummyVariantDraft(
+    warehouses: List<Warehouse>,
+    optionTypesCatalog: List<ProductOptionTypeCatalog>,
+): VariantDraft {
+    val warehouseQuantities = warehouses.associate { it.id to "10" }
+    val firstTypeWithValue = optionTypesCatalog.firstOrNull { it.values.isNotEmpty() }
+    val selectedType = firstTypeWithValue?.name
+    val selectedValue = firstTypeWithValue?.values?.firstOrNull()?.value
+    return VariantDraft(
+        sku = "DUMMY-${System.currentTimeMillis()}",
+        costPrice = "8.50",
+        unitPrice = "19.99",
+        barcode = "5901234123457",
+        selectedOptionType = selectedType,
+        selectedOptionValue = selectedValue,
+        isCreatingNewType = false,
+        isCreatingNewValue = false,
+        newOptionTypeText = "",
+        newOptionValueText = "",
+        warehouseQuantities = warehouseQuantities,
+    )
 }
 
 private fun buildPayloadOrNull(

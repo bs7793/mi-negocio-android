@@ -18,6 +18,7 @@
     <string name="products_field_cost_price">Precio de costo</string>
     <string name="products_field_cost_price_placeholder">Opcional, ej. 8,50</string>
     <string name="products_field_cost_price_invalid">Introduce un costo válido (0 o mayor) o déjalo en blanco</string>
+    <string name="products_debug_fill_dummy_data">Rellenar con datos dummy (debug)</string>
     <string name="products_variant_validation_error">Cada variante requiere SKU, precio unitario válido, precio de costo opcional válido y selección de opciones completa.</string>
     <string name="sales_screen_title">Ventas</string>
     <string name="sales_search_label">Buscar producto</string>

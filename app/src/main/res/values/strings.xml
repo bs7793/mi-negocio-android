@@ -112,6 +112,7 @@
     <string name="products_field_new_option_type">New option type</string>
     <string name="products_field_new_option_value">New option value</string>
     <string name="products_inventory_per_warehouse">Initial inventory per warehouse</string>
+    <string name="products_debug_fill_dummy_data">Fill with dummy data (debug)</string>
     <string name="products_action_add_variant">Add another variant</string>
     <string name="products_variant_validation_error">Each variant requires SKU, valid unit price, valid optional cost price, and complete option selection.</string>
     <string name="products_action_add">Add product</string>

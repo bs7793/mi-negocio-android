@@ -6,8 +6,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import superapps.minegocio.ui.SalesSummaryInvalidationBus
 import java.time.Clock
 import java.time.YearMonth
 
@@ -15,6 +17,7 @@ private const val ALL_WAREHOUSES_OPTION_ID: Long = -1L
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val warehouses: List<DashboardWarehouse> = emptyList(),
     val selectedWarehouseId: Long = ALL_WAREHOUSES_OPTION_ID,
     val summary: DashboardIncomeStatementSummary = DashboardIncomeStatementSummary(),
@@ -32,11 +35,16 @@ class DashboardViewModel(
 
     init {
         loadInitial()
+        viewModelScope.launch {
+            SalesSummaryInvalidationBus.salesSummaryInvalidations.collectLatest {
+                refreshSummaryStaleWhileRevalidate()
+            }
+        }
     }
 
     fun loadInitial() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, isRefreshing = false, errorMessage = null) }
             try {
                 val warehousesDeferred = async { repository.fetchWarehouses() }
                 val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone) }
@@ -45,6 +53,7 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         warehouses = warehouses,
                         selectedWarehouseId = ALL_WAREHOUSES_OPTION_ID,
                         summary = summary,
@@ -55,9 +64,36 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),
                     )
                 }
+            }
+        }
+    }
+
+    private suspend fun refreshSummaryStaleWhileRevalidate() {
+        val warehouseFilter = _uiState.value.selectedWarehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID }
+        _uiState.update { it.copy(isRefreshing = true) }
+        try {
+            val summary = repository.fetchMonthlySummary(
+                warehouseId = warehouseFilter,
+                zoneId = clock.zone,
+            )
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    summary = summary,
+                    period = YearMonth.now(clock),
+                    errorMessage = null,
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    errorMessage = e.message ?: e.toString(),
+                )
             }
         }
     }
@@ -67,6 +103,7 @@ class DashboardViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = true,
+                    isRefreshing = false,
                     selectedWarehouseId = warehouseId,
                     errorMessage = null,
                 )
@@ -79,6 +116,7 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         summary = summary,
                         period = YearMonth.now(clock),
                     )
@@ -87,6 +125,7 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),
                     )
                 }

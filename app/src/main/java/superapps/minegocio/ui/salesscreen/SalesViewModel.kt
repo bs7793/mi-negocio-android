@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import superapps.minegocio.ui.SalesSummaryInvalidationBus
 import superapps.minegocio.ui.warehousesscreen.Warehouse
 import kotlin.math.max
 
@@ -358,6 +359,7 @@ class SalesViewModel(
                         successMessage = "Sale #${response.saleId} completed.",
                     )
                 }
+                SalesSummaryInvalidationBus.invalidateSalesSummary()
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

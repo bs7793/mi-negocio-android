@@ -3,6 +3,8 @@ package superapps.minegocio.ui.dashboardscreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,12 +34,15 @@ class DashboardViewModel(
 
     private val _uiState = MutableStateFlow(DashboardUiState(period = YearMonth.now(clock)))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private var refreshJob: Job? = null
+    private var latestRefreshRequestId: Long = 0
+    private var refreshingWarehouseFilter: Long? = null
 
     init {
         loadInitial()
         viewModelScope.launch {
             SalesSummaryInvalidationBus.salesSummaryInvalidations.collectLatest {
-                refreshSummaryStaleWhileRevalidate()
+                requestSummaryRefresh(force = false)
             }
         }
     }
@@ -72,14 +77,34 @@ class DashboardViewModel(
         }
     }
 
-    private suspend fun refreshSummaryStaleWhileRevalidate() {
+    private fun requestSummaryRefresh(force: Boolean) {
         val warehouseFilter = _uiState.value.selectedWarehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID }
+        if (!force && _uiState.value.isRefreshing && refreshingWarehouseFilter == warehouseFilter) {
+            return
+        }
+        latestRefreshRequestId += 1
+        val requestId = latestRefreshRequestId
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            refreshSummaryStaleWhileRevalidate(
+                warehouseFilter = warehouseFilter,
+                requestId = requestId,
+            )
+        }
+    }
+
+    private suspend fun refreshSummaryStaleWhileRevalidate(
+        warehouseFilter: Long?,
+        requestId: Long,
+    ) {
+        refreshingWarehouseFilter = warehouseFilter
         _uiState.update { it.copy(isRefreshing = true) }
         try {
             val summary = repository.fetchMonthlySummary(
                 warehouseId = warehouseFilter,
                 zoneId = clock.zone,
             )
+            if (requestId != latestRefreshRequestId) return
             _uiState.update {
                 it.copy(
                     isRefreshing = false,
@@ -88,24 +113,32 @@ class DashboardViewModel(
                     errorMessage = null,
                 )
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
+            if (requestId != latestRefreshRequestId) return
             _uiState.update {
                 it.copy(
                     isRefreshing = false,
                     errorMessage = e.message ?: e.toString(),
                 )
             }
+        } finally {
+            if (requestId == latestRefreshRequestId) {
+                refreshingWarehouseFilter = null
+            }
         }
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            refreshSummaryStaleWhileRevalidate()
-        }
+        requestSummaryRefresh(force = false)
     }
 
     fun selectWarehouse(warehouseId: Long) {
         viewModelScope.launch {
+            latestRefreshRequestId += 1
+            refreshJob?.cancel()
+            refreshingWarehouseFilter = null
             _uiState.update {
                 it.copy(
                     isLoading = true,

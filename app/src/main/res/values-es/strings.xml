@@ -116,4 +116,5 @@
     <string name="dashboard_sale_status_draft">Borrador</string>
     <string name="dashboard_sale_status_completed">Completada</string>
     <string name="dashboard_sale_status_voided">Anulada</string>
+    <string name="dashboard_sale_detail_line_image_a11y">Imagen del producto %1$s</string>
 </resources>

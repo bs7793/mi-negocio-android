@@ -74,6 +74,8 @@ class DashboardContractsTest {
         assertEquals("completed", detail.status)
         assertEquals(2, detail.lines.size)
         assertEquals("T-Shirt", detail.lines.first().productName)
+        assertEquals("https://example.com/product-images/tshirt.jpg", detail.lines.first().imageUrl)
+        assertEquals(null, detail.lines[1].imageUrl)
         assertEquals("Gift wrap", detail.lines[1].notes)
         assertEquals(2, detail.payments.size)
         assertEquals("AUTH123", detail.payments[1].referenceText)

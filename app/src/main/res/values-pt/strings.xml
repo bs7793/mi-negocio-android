@@ -116,4 +116,5 @@
     <string name="dashboard_sale_status_draft">Rascunho</string>
     <string name="dashboard_sale_status_completed">Concluída</string>
     <string name="dashboard_sale_status_voided">Cancelada</string>
+    <string name="dashboard_sale_detail_line_image_a11y">Imagem do produto %1$s</string>
 </resources>

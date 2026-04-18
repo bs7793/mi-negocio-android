@@ -18,7 +18,8 @@
       "quantity": 2.0,
       "applied_unit_price": 40.0,
       "line_total": 80.0,
-      "notes": null
+      "notes": null,
+      "image_url": "https://example.com/product-images/tshirt.jpg"
     },
     {
       "variant_id": 9002,
@@ -27,7 +28,8 @@
       "quantity": 3.0,
       "applied_unit_price": 5.0,
       "line_total": 15.0,
-      "notes": "Gift wrap"
+      "notes": "Gift wrap",
+      "image_url": null
     }
   ],
   "payments": [

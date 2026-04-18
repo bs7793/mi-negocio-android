@@ -71,6 +71,8 @@ data class DashboardSaleDetailLine(
     @SerialName("line_total")
     val lineTotal: Double = 0.0,
     val notes: String? = null,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
 )
 
 @Serializable

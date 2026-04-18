@@ -1,16 +1,21 @@
 package superapps.minegocio.ui.dashboardscreen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -19,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import superapps.minegocio.R
 import java.text.NumberFormat
 import java.time.OffsetDateTime
@@ -260,47 +268,80 @@ private fun SaleDetailLineCard(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = line.productName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            val imageModifier = Modifier
+                .size(72.dp)
+                .clip(MaterialTheme.shapes.medium)
+            val imageDescription = stringResource(
+                R.string.dashboard_sale_detail_line_image_a11y,
+                line.productName,
             )
-            Text(
-                text = stringResource(
-                    R.string.dashboard_sale_detail_line_meta,
-                    line.sku,
-                    qtyFormatter.format(line.quantity),
-                    amountFormatter.format(line.appliedUnitPrice),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            line.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+            if (!line.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = line.imageUrl,
+                    contentDescription = imageDescription,
+                    modifier = imageModifier,
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = imageModifier.background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Image,
+                        contentDescription = imageDescription,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = line.productName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(
+                    text = stringResource(
+                        R.string.dashboard_sale_detail_line_meta,
+                        line.sku,
+                        qtyFormatter.format(line.quantity),
+                        amountFormatter.format(line.appliedUnitPrice),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                line.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+                    Text(
+                        text = notes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = stringResource(
+                        R.string.dashboard_sale_detail_line_total,
+                        amountFormatter.format(line.lineTotal),
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
-            Text(
-                text = stringResource(
-                    R.string.dashboard_sale_detail_line_total,
-                    amountFormatter.format(line.lineTotal),
-                ),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
         }
     }
 }

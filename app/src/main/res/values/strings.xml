@@ -218,4 +218,5 @@
     <string name="dashboard_sale_status_draft">Draft</string>
     <string name="dashboard_sale_status_completed">Completed</string>
     <string name="dashboard_sale_status_voided">Voided</string>
+    <string name="dashboard_sale_detail_line_image_a11y">Product image for %1$s</string>
 </resources>

@@ -1,7 +1,7 @@
 package superapps.minegocio.navigation
 
-object HomeNavRoutes {
-    const val HOME = "home"
+object ProfileNavRoutes {
+    const val PROFILE_ROOT = "profile_root"
     const val CATEGORIES = "categories"
     const val WAREHOUSES = "warehouses"
     const val PRODUCTS = "products"

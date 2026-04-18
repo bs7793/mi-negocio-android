@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -42,17 +41,22 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
-import superapps.minegocio.navigation.HomeNavRoutes
+import superapps.minegocio.navigation.ProfileNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.dashboardscreen.DashboardScreen
-import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.profile.ProfileScreen
 import superapps.minegocio.ui.productsscreen.ProductsScreen
 import superapps.minegocio.ui.reportsscreen.ReportsScreen
 import superapps.minegocio.ui.salesscreen.SalesScreen
 import superapps.minegocio.ui.warehousesscreen.WarehousesScreen
 import superapps.minegocio.ui.theme.MyApplicationTheme
+
+private fun appDestinationFromSavedName(name: String?): AppDestinations {
+    if (name.isNullOrBlank()) return AppDestinations.DASHBOARD
+    if (name == "HOME") return AppDestinations.DASHBOARD
+    return runCatching { AppDestinations.valueOf(name) }.getOrElse { AppDestinations.DASHBOARD }
+}
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermissionLauncher = registerForActivityResult(
@@ -87,7 +91,8 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun MyApplicationApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var savedDestinationName by rememberSaveable { mutableStateOf(AppDestinations.DASHBOARD.name) }
+    val currentDestination = appDestinationFromSavedName(savedDestinationName)
     val authViewModel: AuthViewModel = viewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -138,84 +143,78 @@ fun MyApplicationApp() {
                     },
                     label = { Text(it.label) },
                     selected = it == currentDestination,
-                    onClick = { currentDestination = it }
+                    onClick = { savedDestinationName = it.name }
                 )
             }
         }
     ) {
         when (currentDestination) {
-            AppDestinations.HOME -> {
-                val navController = rememberNavController()
-                NavHost(
-                    navController = navController,
-                    startDestination = HomeNavRoutes.HOME,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    composable(HomeNavRoutes.HOME) {
-                        HomeScreen(
-                            authUiState = authUiState,
-                            onSignOut = { authViewModel.signOutAndContinueAnonymously() },
-                            onDismissAuthError = { authViewModel.clearError() },
-                            onOpenProducts = {
-                                navController.navigate(HomeNavRoutes.PRODUCTS)
-                            },
-                            onOpenSales = {
-                                navController.navigate(HomeNavRoutes.SALES)
-                            },
-                            onOpenCategories = {
-                                navController.navigate(HomeNavRoutes.CATEGORIES)
-                            },
-                            onOpenWarehouses = {
-                                navController.navigate(HomeNavRoutes.WAREHOUSES)
-                            },
-                        )
-                    }
-                    composable(HomeNavRoutes.CATEGORIES) {
-                        CategoriesScreen(
-                            onNavigateUp = { navController.popBackStack() },
-                        )
-                    }
-                    composable(HomeNavRoutes.PRODUCTS) {
-                        ProductsScreen(
-                            onNavigateUp = { navController.popBackStack() },
-                        )
-                    }
-                    composable(HomeNavRoutes.WAREHOUSES) {
-                        WarehousesScreen(
-                            onNavigateUp = { navController.popBackStack() },
-                        )
-                    }
-                    composable(HomeNavRoutes.SALES) {
-                        SalesScreen(
-                            onNavigateUp = { navController.popBackStack() },
-                        )
-                    }
-                }
+            AppDestinations.DASHBOARD -> {
+                DashboardScreen()
             }
             AppDestinations.SALES -> {
                 SalesScreen(
-                    onNavigateUp = { currentDestination = AppDestinations.HOME },
+                    onNavigateUp = { savedDestinationName = AppDestinations.DASHBOARD.name },
                 )
             }
             AppDestinations.REPORTS -> {
                 ReportsScreen()
             }
-            AppDestinations.DASHBOARD -> {
-                DashboardScreen()
-            }
             AppDestinations.PROFILE -> {
-                ProfileScreen(
-                    authUiState = authUiState,
-                    onSignInWithGoogle = {
-                        if (!hasValidWebClientId) {
-                            authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
-                        } else {
-                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
-                        }
-                    },
-                    onDismissAuthError = { authViewModel.clearError() },
+                val navController = rememberNavController()
+                NavHost(
+                    navController = navController,
+                    startDestination = ProfileNavRoutes.PROFILE_ROOT,
                     modifier = Modifier.fillMaxSize(),
-                )
+                ) {
+                    composable(ProfileNavRoutes.PROFILE_ROOT) {
+                        ProfileScreen(
+                            authUiState = authUiState,
+                            onSignInWithGoogle = {
+                                if (!hasValidWebClientId) {
+                                    authViewModel.setError(context.getString(R.string.auth_google_client_not_configured))
+                                } else {
+                                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                }
+                            },
+                            onSignOut = { authViewModel.signOutAndContinueAnonymously() },
+                            onDismissAuthError = { authViewModel.clearError() },
+                            onOpenCategories = {
+                                navController.navigate(ProfileNavRoutes.CATEGORIES)
+                            },
+                            onOpenProducts = {
+                                navController.navigate(ProfileNavRoutes.PRODUCTS)
+                            },
+                            onOpenSales = {
+                                navController.navigate(ProfileNavRoutes.SALES)
+                            },
+                            onOpenWarehouses = {
+                                navController.navigate(ProfileNavRoutes.WAREHOUSES)
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                    composable(ProfileNavRoutes.CATEGORIES) {
+                        CategoriesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(ProfileNavRoutes.PRODUCTS) {
+                        ProductsScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(ProfileNavRoutes.WAREHOUSES) {
+                        WarehousesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(ProfileNavRoutes.SALES) {
+                        SalesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                }
             }
         }
     }
@@ -225,10 +224,9 @@ enum class AppDestinations(
     val label: String,
     val icon: ImageVector,
 ) {
-    HOME("Home", Icons.Default.Home),
+    DASHBOARD("Dashboard", Icons.Default.Dashboard),
     SALES("Sales", Icons.Default.ShoppingCart),
     REPORTS("Reports", Icons.Default.Assessment),
-    DASHBOARD("Dashboard", Icons.Default.Dashboard),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
 

@@ -1,8 +1,11 @@
 <resources>
     <string name="app_name">Mi Negocio</string>
-    <string name="home_title">Inicio</string>
-    <string name="home_open_categories">Categorías</string>
-    <string name="home_open_sales">Ventas</string>
+    <string name="profile_screen_title">Perfil</string>
+    <string name="profile_section_management">Tu negocio</string>
+    <string name="profile_menu_categories">Categorías</string>
+    <string name="profile_menu_products">Productos</string>
+    <string name="profile_menu_sales">Ventas</string>
+    <string name="profile_menu_warehouses">Bodegas</string>
     <string name="categories_screen_title">Categorías</string>
     <string name="cd_navigate_up">Ir atrás</string>
     <string name="cd_add_category">Agregar categoría</string>

@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">My Business</string>
-    <string name="home_title">Home</string>
     <string name="profile_screen_title">Profile</string>
-    <string name="home_open_categories">Categories</string>
-    <string name="home_open_products">Products</string>
-    <string name="home_open_sales">Sales</string>
-    <string name="home_open_warehouses">Warehouses</string>
+    <string name="profile_section_management">Your business</string>
+    <string name="profile_menu_categories">Categories</string>
+    <string name="profile_menu_products">Products</string>
+    <string name="profile_menu_sales">Sales</string>
+    <string name="profile_menu_warehouses">Warehouses</string>
     <string name="auth_status_anonymous">You are using an anonymous session.</string>
     <string name="auth_status_signed_in">Signed in as %1$s</string>
     <string name="auth_action_sign_in_google">Sign in with Google</string>

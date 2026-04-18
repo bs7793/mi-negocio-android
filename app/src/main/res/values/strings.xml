@@ -196,4 +196,26 @@
     <string name="dashboard_sales_feed_empty">No sales this month yet.</string>
     <string name="dashboard_sales_feed_payment_unknown">Payment</string>
     <string name="dashboard_sales_feed_row_a11y">Sale on %1$s for %2$s, %3$s</string>
+    <string name="dashboard_sale_detail_title">Sale details</string>
+    <string name="dashboard_sale_detail_id">Sale #%1$d</string>
+    <string name="dashboard_sale_detail_retry">Retry</string>
+    <string name="dashboard_sale_detail_section_summary">Summary</string>
+    <string name="dashboard_sale_detail_section_items">Items</string>
+    <string name="dashboard_sale_detail_section_payments">Payments</string>
+    <string name="dashboard_sale_detail_sold_at">Date</string>
+    <string name="dashboard_sale_detail_customer">Customer</string>
+    <string name="dashboard_sale_detail_subtotal">Subtotal</string>
+    <string name="dashboard_sale_detail_discount">Discount</string>
+    <string name="dashboard_sale_detail_tax">Tax</string>
+    <string name="dashboard_sale_detail_total">Total</string>
+    <string name="dashboard_sale_detail_paid">Paid</string>
+    <string name="dashboard_sale_detail_change">Change</string>
+    <string name="dashboard_sale_detail_status">Status</string>
+    <string name="dashboard_sale_detail_line_meta">SKU %1$s · Qty %2$s × %3$s</string>
+    <string name="dashboard_sale_detail_line_total">Line total: %1$s</string>
+    <string name="dashboard_sale_detail_payment_ref">Ref: %1$s</string>
+    <string name="dashboard_sale_detail_notes">Notes</string>
+    <string name="dashboard_sale_status_draft">Draft</string>
+    <string name="dashboard_sale_status_completed">Completed</string>
+    <string name="dashboard_sale_status_voided">Voided</string>
 </resources>

@@ -1,0 +1,45 @@
+{
+  "sale_id": 42,
+  "sold_at": "2025-04-18T14:30:00+00:00",
+  "customer_name": "Jane Doe",
+  "notes": "Thank you",
+  "subtotal": 100.0,
+  "discount_total": 5.0,
+  "tax_total": 0.0,
+  "total": 95.0,
+  "paid_total": 100.0,
+  "change_total": 5.0,
+  "status": "completed",
+  "lines": [
+    {
+      "variant_id": 9001,
+      "product_name": "T-Shirt",
+      "sku": "TSH-BLK-M",
+      "quantity": 2.0,
+      "applied_unit_price": 40.0,
+      "line_total": 80.0,
+      "notes": null
+    },
+    {
+      "variant_id": 9002,
+      "product_name": "Sticker",
+      "sku": "STK-01",
+      "quantity": 3.0,
+      "applied_unit_price": 5.0,
+      "line_total": 15.0,
+      "notes": "Gift wrap"
+    }
+  ],
+  "payments": [
+    {
+      "payment_method": "cash",
+      "amount": 60.0,
+      "reference_text": null
+    },
+    {
+      "payment_method": "card",
+      "amount": 40.0,
+      "reference_text": "AUTH123"
+    }
+  ]
+}

@@ -33,3 +33,51 @@ data class DashboardSalesFeedItem(
     @SerialName("payment_method")
     val paymentMethod: String? = null,
 )
+
+@Serializable
+data class DashboardSaleDetail(
+    @SerialName("sale_id")
+    val saleId: Long,
+    @SerialName("sold_at")
+    val soldAt: String,
+    @SerialName("customer_name")
+    val customerName: String? = null,
+    val notes: String? = null,
+    val subtotal: Double = 0.0,
+    @SerialName("discount_total")
+    val discountTotal: Double = 0.0,
+    @SerialName("tax_total")
+    val taxTotal: Double = 0.0,
+    val total: Double = 0.0,
+    @SerialName("paid_total")
+    val paidTotal: Double = 0.0,
+    @SerialName("change_total")
+    val changeTotal: Double = 0.0,
+    val status: String = "completed",
+    val lines: List<DashboardSaleDetailLine> = emptyList(),
+    val payments: List<DashboardSaleDetailPayment> = emptyList(),
+)
+
+@Serializable
+data class DashboardSaleDetailLine(
+    @SerialName("variant_id")
+    val variantId: Long,
+    @SerialName("product_name")
+    val productName: String,
+    val sku: String,
+    val quantity: Double = 0.0,
+    @SerialName("applied_unit_price")
+    val appliedUnitPrice: Double = 0.0,
+    @SerialName("line_total")
+    val lineTotal: Double = 0.0,
+    val notes: String? = null,
+)
+
+@Serializable
+data class DashboardSaleDetailPayment(
+    @SerialName("payment_method")
+    val paymentMethod: String,
+    val amount: Double = 0.0,
+    @SerialName("reference_text")
+    val referenceText: String? = null,
+)

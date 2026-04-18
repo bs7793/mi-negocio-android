@@ -1,5 +1,6 @@
 package superapps.minegocio.ui.dashboardscreen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -244,6 +245,7 @@ fun DashboardScreen(
                                 item = sale,
                                 amountFormatter = amountFormatter,
                                 locale = locale,
+                                onClick = { viewModel.openSaleDetail(sale.saleId) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
@@ -252,6 +254,17 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
+        if (uiState.selectedSaleId != null) {
+            DashboardSaleDetailBottomSheet(
+                onDismissRequest = { viewModel.closeSaleDetail() },
+                isLoading = uiState.isSaleDetailLoading,
+                detail = uiState.saleDetail,
+                errorMessage = uiState.saleDetailError,
+                onRetry = { viewModel.retrySaleDetail() },
+                amountFormatter = amountFormatter,
+                locale = locale,
+            )
         }
     }
 }
@@ -543,6 +556,7 @@ private fun DashboardSalesFeedRow(
     item: DashboardSalesFeedItem,
     amountFormatter: NumberFormat,
     locale: Locale,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dateText = remember(item.soldAt, locale) {
@@ -557,7 +571,9 @@ private fun DashboardSalesFeedRow(
         paymentLabel,
     )
     ElevatedCard(
-        modifier = modifier.semantics { contentDescription = rowA11y },
+        modifier = modifier
+            .semantics { contentDescription = rowA11y }
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),

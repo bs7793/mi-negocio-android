@@ -31,6 +31,17 @@ class DashboardRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
+    suspend fun fetchSaleDetail(saleId: Long): DashboardSaleDetail = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_dashboard_sale_detail"
+        val body = json.encodeToString(GetDashboardSaleDetailPayload(saleId = saleId))
+        val result = post(endpoint, body)
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to fetch sale detail (${result.code})"))
+        }
+        return@withContext json.decodeFromString(result.body)
+    }
+
     suspend fun fetchSalesFeed(
         warehouseId: Long?,
         zoneId: ZoneId = ZoneId.systemDefault(),
@@ -177,4 +188,10 @@ private data class GetDashboardSalesFeedPayload(
     val endAt: String? = null,
     @SerialName("p_limit")
     val limit: Int = 50,
+)
+
+@Serializable
+private data class GetDashboardSaleDetailPayload(
+    @SerialName("p_sale_id")
+    val saleId: Long,
 )

@@ -1,0 +1,15 @@
+{
+  "sale_id": 99,
+  "sold_at": "2025-04-01T10:00:00Z",
+  "customer_name": null,
+  "notes": null,
+  "subtotal": 0.0,
+  "discount_total": 0.0,
+  "tax_total": 0.0,
+  "total": 0.0,
+  "paid_total": 0.0,
+  "change_total": 0.0,
+  "status": "completed",
+  "lines": [],
+  "payments": []
+}

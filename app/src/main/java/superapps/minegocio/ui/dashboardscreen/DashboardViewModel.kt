@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,10 @@ data class DashboardUiState(
     val errorMessage: String? = null,
     /** Non-blocking: KPI can load while feed fails. */
     val feedErrorMessage: String? = null,
+    val selectedSaleId: Long? = null,
+    val isSaleDetailLoading: Boolean = false,
+    val saleDetail: DashboardSaleDetail? = null,
+    val saleDetailError: String? = null,
 )
 
 class DashboardViewModel(
@@ -41,6 +46,7 @@ class DashboardViewModel(
     private val _uiState = MutableStateFlow(DashboardUiState(period = YearMonth.now(clock)))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private var refreshJob: Job? = null
+    private var saleDetailJob: Job? = null
     private var latestRefreshRequestId: Long = 0
     private var refreshingWarehouseFilter: Long? = null
 
@@ -232,5 +238,60 @@ class DashboardViewModel(
                 }
             }
         }
+    }
+
+    fun openSaleDetail(saleId: Long) {
+        saleDetailJob?.cancel()
+        saleDetailJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    selectedSaleId = saleId,
+                    isSaleDetailLoading = true,
+                    saleDetail = null,
+                    saleDetailError = null,
+                )
+            }
+            try {
+                val detail = repository.fetchSaleDetail(saleId)
+                ensureActive()
+                if (_uiState.value.selectedSaleId != saleId) return@launch
+                _uiState.update {
+                    it.copy(
+                        isSaleDetailLoading = false,
+                        saleDetail = detail,
+                        saleDetailError = null,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (_uiState.value.selectedSaleId != saleId) return@launch
+                _uiState.update {
+                    it.copy(
+                        isSaleDetailLoading = false,
+                        saleDetail = null,
+                        saleDetailError = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun closeSaleDetail() {
+        saleDetailJob?.cancel()
+        saleDetailJob = null
+        _uiState.update {
+            it.copy(
+                selectedSaleId = null,
+                isSaleDetailLoading = false,
+                saleDetail = null,
+                saleDetailError = null,
+            )
+        }
+    }
+
+    fun retrySaleDetail() {
+        val id = _uiState.value.selectedSaleId ?: return
+        openSaleDetail(id)
     }
 }

@@ -64,4 +64,29 @@ class DashboardContractsTest {
         )
         assertEquals(0, feed.size)
     }
+
+    @Test
+    fun `decode dashboard sale detail happy fixture`() {
+        val detail = ContractFixtureLoader.decode<DashboardSaleDetail>(
+            "contracts/dashboardscreen/get_dashboard_sale_detail_rpc_response_fixture.json",
+        )
+        assertEquals(42L, detail.saleId)
+        assertEquals("completed", detail.status)
+        assertEquals(2, detail.lines.size)
+        assertEquals("T-Shirt", detail.lines.first().productName)
+        assertEquals("Gift wrap", detail.lines[1].notes)
+        assertEquals(2, detail.payments.size)
+        assertEquals("AUTH123", detail.payments[1].referenceText)
+    }
+
+    @Test
+    fun `decode dashboard sale detail edge fixture`() {
+        val detail = ContractFixtureLoader.decode<DashboardSaleDetail>(
+            "contracts/dashboardscreen/get_dashboard_sale_detail_rpc_response_edge_fixture.json",
+        )
+        assertEquals(99L, detail.saleId)
+        assertEquals(null, detail.customerName)
+        assertEquals(0, detail.lines.size)
+        assertEquals(0, detail.payments.size)
+    }
 }

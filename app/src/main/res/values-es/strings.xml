@@ -79,4 +79,11 @@
     <string name="reports_card_total_value">Tarjeta: %1$.2f</string>
     <string name="reports_transfer_total_value">Transferencia: %1$.2f</string>
     <string name="reports_other_total_value">Otro: %1$.2f</string>
+    <string name="dashboard_screen_title">Dashboard</string>
+    <string name="dashboard_period_label">Mes actual</string>
+    <string name="dashboard_all_warehouses_option">Todas las bodegas</string>
+    <string name="dashboard_income_label">Ingresos</string>
+    <string name="dashboard_cost_label">Costos</string>
+    <string name="dashboard_profit_label">Utilidad</string>
+    <string name="dashboard_amount_value">%1$.2f</string>
 </resources>

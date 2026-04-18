@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import superapps.minegocio.navigation.HomeNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
+import superapps.minegocio.ui.dashboardscreen.DashboardScreen
 import superapps.minegocio.ui.home.HomeScreen
 import superapps.minegocio.ui.profile.ProfileScreen
 import superapps.minegocio.ui.productsscreen.ProductsScreen
@@ -198,6 +200,9 @@ fun MyApplicationApp() {
             AppDestinations.REPORTS -> {
                 ReportsScreen()
             }
+            AppDestinations.DASHBOARD -> {
+                DashboardScreen()
+            }
             AppDestinations.PROFILE -> {
                 ProfileScreen(
                     authUiState = authUiState,
@@ -223,6 +228,7 @@ enum class AppDestinations(
     HOME("Home", Icons.Default.Home),
     SALES("Sales", Icons.Default.ShoppingCart),
     REPORTS("Reports", Icons.Default.Assessment),
+    DASHBOARD("Dashboard", Icons.Default.Dashboard),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
 

@@ -98,6 +98,12 @@ class DashboardViewModel(
         }
     }
 
+    fun refresh() {
+        viewModelScope.launch {
+            refreshSummaryStaleWhileRevalidate()
+        }
+    }
+
     fun selectWarehouse(warehouseId: Long) {
         viewModelScope.launch {
             _uiState.update {

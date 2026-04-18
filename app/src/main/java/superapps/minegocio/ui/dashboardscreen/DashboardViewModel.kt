@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +26,11 @@ data class DashboardUiState(
     val warehouses: List<DashboardWarehouse> = emptyList(),
     val selectedWarehouseId: Long = ALL_WAREHOUSES_OPTION_ID,
     val summary: DashboardIncomeStatementSummary = DashboardIncomeStatementSummary(),
+    val salesFeed: List<DashboardSalesFeedItem> = emptyList(),
     val period: YearMonth = YearMonth.now(),
     val errorMessage: String? = null,
+    /** Non-blocking: KPI can load while feed fails. */
+    val feedErrorMessage: String? = null,
 )
 
 class DashboardViewModel(
@@ -57,13 +61,16 @@ class DashboardViewModel(
                     isSummaryUpdating = false,
                     isRefreshing = false,
                     errorMessage = null,
+                    feedErrorMessage = null,
                 )
             }
+            val warehousesDeferred = async { repository.fetchWarehouses() }
+            val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone) }
+            val feedDeferred = async { runCatching { repository.fetchSalesFeed(warehouseId = null, zoneId = clock.zone) } }
             try {
-                val warehousesDeferred = async { repository.fetchWarehouses() }
-                val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone) }
                 val warehouses = warehousesDeferred.await()
                 val summary = summaryDeferred.await()
+                val feedResult = feedDeferred.await()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -72,16 +79,27 @@ class DashboardViewModel(
                         warehouses = warehouses,
                         selectedWarehouseId = ALL_WAREHOUSES_OPTION_ID,
                         summary = summary,
+                        salesFeed = feedResult.getOrElse { emptyList() },
+                        feedErrorMessage = feedResult.exceptionOrNull()?.let { e ->
+                            e.message ?: e.toString()
+                        },
                         period = YearMonth.now(clock),
+                        errorMessage = null,
                     )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val feedResult = feedDeferred.await()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isSummaryUpdating = false,
                         isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),
+                        salesFeed = feedResult.getOrElse { emptyList() },
+                        feedErrorMessage = feedResult.exceptionOrNull()?.let { err ->
+                            err.message ?: err.toString()
+                        },
                     )
                 }
             }
@@ -111,28 +129,37 @@ class DashboardViewModel(
         refreshingWarehouseFilter = warehouseFilter
         _uiState.update { it.copy(isRefreshing = true) }
         try {
-            val summary = repository.fetchMonthlySummary(
-                warehouseId = warehouseFilter,
-                zoneId = clock.zone,
-            )
-            if (requestId != latestRefreshRequestId) return
-            _uiState.update {
-                it.copy(
-                    isRefreshing = false,
-                    summary = summary,
-                    period = YearMonth.now(clock),
-                    errorMessage = null,
-                )
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (e: Exception) {
-            if (requestId != latestRefreshRequestId) return
-            _uiState.update {
-                it.copy(
-                    isRefreshing = false,
-                    errorMessage = e.message ?: e.toString(),
-                )
+            coroutineScope {
+                val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = warehouseFilter, zoneId = clock.zone) }
+                val feedDeferred = async { runCatching { repository.fetchSalesFeed(warehouseId = warehouseFilter, zoneId = clock.zone) } }
+                try {
+                    val summary = summaryDeferred.await()
+                    val feedResult = feedDeferred.await()
+                    if (requestId != latestRefreshRequestId) return@coroutineScope
+                    _uiState.update {
+                        it.copy(
+                            isRefreshing = false,
+                            summary = summary,
+                            salesFeed = feedResult.getOrElse { emptyList() },
+                            feedErrorMessage = feedResult.exceptionOrNull()?.let { e -> e.message ?: e.toString() },
+                            period = YearMonth.now(clock),
+                            errorMessage = null,
+                        )
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    if (requestId != latestRefreshRequestId) return@coroutineScope
+                    val feedResult = feedDeferred.await()
+                    _uiState.update {
+                        it.copy(
+                            isRefreshing = false,
+                            errorMessage = e.message ?: e.toString(),
+                            salesFeed = feedResult.getOrElse { emptyList() },
+                            feedErrorMessage = feedResult.exceptionOrNull()?.let { err -> err.message ?: err.toString() },
+                        )
+                    }
+                }
             }
         } finally {
             if (requestId == latestRefreshRequestId) {
@@ -157,29 +184,50 @@ class DashboardViewModel(
                     isRefreshing = false,
                     selectedWarehouseId = warehouseId,
                     errorMessage = null,
+                    feedErrorMessage = null,
                 )
             }
-            try {
-                val summary = repository.fetchMonthlySummary(
+            val summaryDeferred = async {
+                repository.fetchMonthlySummary(
                     warehouseId = warehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID },
                     zoneId = clock.zone,
                 )
+            }
+            val feedDeferred = async {
+                runCatching {
+                    repository.fetchSalesFeed(
+                        warehouseId = warehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID },
+                        zoneId = clock.zone,
+                    )
+                }
+            }
+            try {
+                val summary = summaryDeferred.await()
+                val feedResult = feedDeferred.await()
                 _uiState.update {
                     it.copy(
                         isSummaryUpdating = false,
                         isLoading = false,
                         isRefreshing = false,
                         summary = summary,
+                        salesFeed = feedResult.getOrElse { emptyList() },
+                        feedErrorMessage = feedResult.exceptionOrNull()?.let { e -> e.message ?: e.toString() },
                         period = YearMonth.now(clock),
                     )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val feedResult = feedDeferred.await()
                 _uiState.update {
                     it.copy(
                         isSummaryUpdating = false,
                         isLoading = false,
                         isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),
+                        salesFeed = feedResult.getOrElse { emptyList() },
+                        feedErrorMessage = feedResult.exceptionOrNull()?.let { err ->
+                            err.message ?: err.toString()
+                        },
                     )
                 }
             }

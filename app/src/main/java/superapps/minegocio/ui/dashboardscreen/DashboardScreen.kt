@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
@@ -53,7 +56,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import superapps.minegocio.R
 import java.text.NumberFormat
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 private const val ALL_WAREHOUSES_OPTION_ID: Long = -1L
@@ -189,6 +194,60 @@ fun DashboardScreen(
                                     strokeWidth = 3.dp,
                                 )
                             }
+                        }
+                    }
+                }
+
+                item(key = "sales_feed_header") {
+                    Text(
+                        text = stringResource(R.string.dashboard_sales_feed_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                    )
+                }
+
+                if (uiState.isLoading) {
+                    item(key = "sales_feed_skeleton") {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            repeat(4) {
+                                DashboardSalesFeedSkeletonRow()
+                            }
+                        }
+                    }
+                } else {
+                    uiState.feedErrorMessage?.let { message ->
+                        item(key = "sales_feed_error") {
+                            DashboardFeedErrorBanner(message = message)
+                        }
+                    }
+                    if (uiState.salesFeed.isEmpty()) {
+                        if (uiState.feedErrorMessage == null) {
+                            item(key = "sales_feed_empty") {
+                                Text(
+                                    text = stringResource(R.string.dashboard_sales_feed_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = uiState.salesFeed,
+                            key = { it.saleId },
+                        ) { sale ->
+                            DashboardSalesFeedRow(
+                                item = sale,
+                                amountFormatter = amountFormatter,
+                                locale = locale,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                            )
                         }
                     }
                 }
@@ -411,5 +470,174 @@ private fun DashboardKpiCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DashboardFeedErrorBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.65f),
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun DashboardSalesFeedSkeletonRow() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(78.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.55f)
+                        .height(14.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {}
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.4f)
+                        .height(12.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                ) {}
+            }
+            Surface(
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(22.dp),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {}
+        }
+    }
+}
+
+@Composable
+private fun DashboardSalesFeedRow(
+    item: DashboardSalesFeedItem,
+    amountFormatter: NumberFormat,
+    locale: Locale,
+    modifier: Modifier = Modifier,
+) {
+    val dateText = remember(item.soldAt, locale) {
+        formatSoldAtForDisplay(item.soldAt, locale)
+    }
+    val paymentLabel = paymentMethodLabel(item.paymentMethod)
+    val formattedAmount = amountFormatter.format(item.total)
+    val rowA11y = stringResource(
+        R.string.dashboard_sales_feed_row_a11y,
+        dateText,
+        formattedAmount,
+        paymentLabel,
+    )
+    ElevatedCard(
+        modifier = modifier.semantics { contentDescription = rowA11y },
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = dateText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val customer = item.customerName?.takeIf { it.isNotBlank() }
+                    if (customer != null) {
+                        Text(
+                            text = customer,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Text(
+                    text = formattedAmount,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = paymentLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+private fun formatSoldAtForDisplay(soldAt: String, locale: Locale): String {
+    return try {
+        val odt = OffsetDateTime.parse(soldAt)
+        DateTimeFormatter
+            .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+            .withLocale(locale)
+            .format(odt)
+    } catch (_: Exception) {
+        soldAt
+    }
+}
+
+@Composable
+private fun paymentMethodLabel(method: String?): String {
+    if (method.isNullOrBlank()) {
+        return stringResource(R.string.dashboard_sales_feed_payment_unknown)
+    }
+    return when (method.lowercase(Locale.ROOT)) {
+        "cash" -> stringResource(R.string.sales_payment_cash)
+        "card" -> stringResource(R.string.sales_payment_card)
+        "transfer" -> stringResource(R.string.sales_payment_transfer)
+        "other" -> stringResource(R.string.sales_payment_other)
+        else -> method
     }
 }

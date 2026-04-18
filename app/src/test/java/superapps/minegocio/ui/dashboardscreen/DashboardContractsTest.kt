@@ -43,4 +43,25 @@ class DashboardContractsTest {
         assertEquals(0.0, summary.costTotal, 0.0001)
         assertEquals(0.0, summary.profitTotal, 0.0001)
     }
+
+    @Test
+    fun `decode dashboard sales feed happy fixture`() {
+        val feed = ContractFixtureLoader.decode<List<DashboardSalesFeedItem>>(
+            "contracts/dashboardscreen/get_dashboard_sales_feed_rpc_response_fixture.json",
+        )
+        assertEquals(2, feed.size)
+        assertEquals(101L, feed.first().saleId)
+        assertEquals("Jane Doe", feed.first().customerName)
+        assertEquals("cash", feed.first().paymentMethod)
+        assertEquals(12.0, feed[1].total, 0.0001)
+        assertEquals(null, feed[1].customerName)
+    }
+
+    @Test
+    fun `decode dashboard sales feed edge fixture`() {
+        val feed = ContractFixtureLoader.decode<List<DashboardSalesFeedItem>>(
+            "contracts/dashboardscreen/get_dashboard_sales_feed_rpc_response_edge_fixture.json",
+        )
+        assertEquals(0, feed.size)
+    }
 }

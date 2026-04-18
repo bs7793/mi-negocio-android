@@ -31,6 +31,29 @@ class DashboardRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
+    suspend fun fetchSalesFeed(
+        warehouseId: Long?,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        limit: Int = 50,
+    ): List<DashboardSalesFeedItem> = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_dashboard_sales_feed"
+        val monthlyRange = calculateLocalMonthRange(zoneId)
+        val body = json.encodeToString(
+            GetDashboardSalesFeedPayload(
+                warehouseId = warehouseId,
+                startAt = monthlyRange.startAt,
+                endAt = monthlyRange.endAt,
+                limit = limit,
+            ),
+        )
+        val result = post(endpoint, body)
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to fetch sales feed (${result.code})"))
+        }
+        return@withContext json.decodeFromString(result.body)
+    }
+
     suspend fun fetchMonthlySummary(
         warehouseId: Long?,
         zoneId: ZoneId = ZoneId.systemDefault(),
@@ -142,4 +165,16 @@ private data class GetIncomeStatementMonthlySummaryPayload(
     val startAt: String? = null,
     @SerialName("p_end_at")
     val endAt: String? = null,
+)
+
+@Serializable
+private data class GetDashboardSalesFeedPayload(
+    @SerialName("p_warehouse_id")
+    val warehouseId: Long? = null,
+    @SerialName("p_start_at")
+    val startAt: String? = null,
+    @SerialName("p_end_at")
+    val endAt: String? = null,
+    @SerialName("p_limit")
+    val limit: Int = 50,
 )

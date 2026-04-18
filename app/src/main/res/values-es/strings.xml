@@ -90,4 +90,8 @@
     <string name="dashboard_amount_value">%1$.2f</string>
     <string name="dashboard_error_icon_a11y">Error</string>
     <string name="dashboard_kpi_row_a11y">%1$s: %2$s</string>
+    <string name="dashboard_sales_feed_title">Ventas recientes</string>
+    <string name="dashboard_sales_feed_empty">Aún no hay ventas este mes.</string>
+    <string name="dashboard_sales_feed_payment_unknown">Pago</string>
+    <string name="dashboard_sales_feed_row_a11y">Venta el %1$s por %2$s, %3$s</string>
 </resources>

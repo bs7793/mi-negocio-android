@@ -20,3 +20,16 @@ data class DashboardIncomeStatementSummary(
     @SerialName("profit_total")
     val profitTotal: Double = 0.0,
 )
+
+@Serializable
+data class DashboardSalesFeedItem(
+    @SerialName("sale_id")
+    val saleId: Long,
+    @SerialName("sold_at")
+    val soldAt: String,
+    val total: Double = 0.0,
+    @SerialName("customer_name")
+    val customerName: String? = null,
+    @SerialName("payment_method")
+    val paymentMethod: String? = null,
+)

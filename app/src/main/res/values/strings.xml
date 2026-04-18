@@ -184,9 +184,12 @@
     <string name="reports_other_total_value">Other: %1$.2f</string>
     <string name="dashboard_screen_title">Dashboard</string>
     <string name="dashboard_period_label">Current month</string>
+    <string name="dashboard_period_subtitle">Monthly income statement summary</string>
     <string name="dashboard_all_warehouses_option">All warehouses</string>
     <string name="dashboard_income_label">Income</string>
     <string name="dashboard_cost_label">Cost</string>
     <string name="dashboard_profit_label">Profit</string>
     <string name="dashboard_amount_value">%1$.2f</string>
+    <string name="dashboard_error_icon_a11y">Error</string>
+    <string name="dashboard_kpi_row_a11y">%1$s: %2$s</string>
 </resources>

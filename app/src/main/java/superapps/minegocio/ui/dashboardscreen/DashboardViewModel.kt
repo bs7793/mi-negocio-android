@@ -19,6 +19,8 @@ private const val ALL_WAREHOUSES_OPTION_ID: Long = -1L
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
+    /** True while fetching summary after warehouse change; keeps previous KPIs visible. */
+    val isSummaryUpdating: Boolean = false,
     val isRefreshing: Boolean = false,
     val warehouses: List<DashboardWarehouse> = emptyList(),
     val selectedWarehouseId: Long = ALL_WAREHOUSES_OPTION_ID,
@@ -49,7 +51,14 @@ class DashboardViewModel(
 
     fun loadInitial() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, isRefreshing = false, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    isSummaryUpdating = false,
+                    isRefreshing = false,
+                    errorMessage = null,
+                )
+            }
             try {
                 val warehousesDeferred = async { repository.fetchWarehouses() }
                 val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone) }
@@ -58,6 +67,7 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isSummaryUpdating = false,
                         isRefreshing = false,
                         warehouses = warehouses,
                         selectedWarehouseId = ALL_WAREHOUSES_OPTION_ID,
@@ -69,6 +79,7 @@ class DashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isSummaryUpdating = false,
                         isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),
                     )
@@ -141,7 +152,8 @@ class DashboardViewModel(
             refreshingWarehouseFilter = null
             _uiState.update {
                 it.copy(
-                    isLoading = true,
+                    isSummaryUpdating = true,
+                    isLoading = false,
                     isRefreshing = false,
                     selectedWarehouseId = warehouseId,
                     errorMessage = null,
@@ -154,6 +166,7 @@ class DashboardViewModel(
                 )
                 _uiState.update {
                     it.copy(
+                        isSummaryUpdating = false,
                         isLoading = false,
                         isRefreshing = false,
                         summary = summary,
@@ -163,6 +176,7 @@ class DashboardViewModel(
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
+                        isSummaryUpdating = false,
                         isLoading = false,
                         isRefreshing = false,
                         errorMessage = e.message ?: e.toString(),

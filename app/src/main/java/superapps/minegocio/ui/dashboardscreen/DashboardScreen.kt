@@ -3,40 +3,58 @@ package superapps.minegocio.ui.dashboardscreen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import superapps.minegocio.R
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private const val ALL_WAREHOUSES_OPTION_ID: Long = -1L
 
@@ -54,18 +72,33 @@ fun DashboardScreen(
             ?: stringResource(R.string.dashboard_all_warehouses_option)
     }
 
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val periodFormatter = remember(locale) {
+        DateTimeFormatter.ofPattern("MMMM yyyy", locale)
+    }
+    val amountFormatter = remember(locale) {
+        NumberFormat.getNumberInstance(locale).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.dashboard_screen_title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
             )
         },
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = {
-                if (!uiState.isLoading) {
+                if (!uiState.isLoading && !uiState.isSummaryUpdating) {
                     viewModel.refresh()
                 }
             },
@@ -76,119 +109,235 @@ fun DashboardScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-            item {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.dashboard_period_label),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = uiState.period.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                if (uiState.errorMessage != null) {
+                    item(key = "error_banner") {
+                        DashboardErrorBanner(message = uiState.errorMessage.orEmpty())
                     }
                 }
-            }
 
-            item {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = selectedWarehouseName,
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.sales_warehouse_label)) },
-                        trailingIcon = {
-                            IconButton(onClick = { warehouseMenuOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.sales_select_warehouse_label),
-                                )
-                            }
+                item(key = "period_hero") {
+                    DashboardPeriodHeroCard(
+                        periodText = uiState.period.format(periodFormatter),
+                    )
+                }
+
+                item(key = "warehouse") {
+                    WarehouseExposedDropdown(
+                        selectedLabel = selectedWarehouseName,
+                        expanded = warehouseMenuOpen,
+                        onExpandedChange = { warehouseMenuOpen = it },
+                        onSelectAllWarehouses = {
+                            warehouseMenuOpen = false
+                            viewModel.selectWarehouse(ALL_WAREHOUSES_OPTION_ID)
+                        },
+                        warehouses = uiState.warehouses,
+                        onSelectWarehouse = { id ->
+                            warehouseMenuOpen = false
+                            viewModel.selectWarehouse(id)
                         },
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { warehouseMenuOpen = true },
-                    )
-                    DropdownMenu(
-                        expanded = warehouseMenuOpen,
-                        onDismissRequest = { warehouseMenuOpen = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.dashboard_all_warehouses_option)) },
-                            onClick = {
-                                warehouseMenuOpen = false
-                                viewModel.selectWarehouse(ALL_WAREHOUSES_OPTION_ID)
-                            },
-                        )
-                        uiState.warehouses.forEach { warehouse ->
-                            DropdownMenuItem(
-                                text = { Text(warehouse.name) },
-                                onClick = {
-                                    warehouseMenuOpen = false
-                                    viewModel.selectWarehouse(warehouse.id)
-                                },
-                            )
+                }
+
+                if (uiState.isLoading) {
+                    item(key = "kpi_skeleton") {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            repeat(3) {
+                                DashboardKpiSkeletonCard()
+                            }
+                        }
+                    }
+                } else {
+                    item(key = "kpis") {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                DashboardKpiCard(
+                                    title = stringResource(R.string.dashboard_income_label),
+                                    amount = uiState.summary.incomeTotal,
+                                    amountFormatter = amountFormatter,
+                                    icon = Icons.AutoMirrored.Outlined.TrendingUp,
+                                    emphasis = false,
+                                )
+                                DashboardKpiCard(
+                                    title = stringResource(R.string.dashboard_cost_label),
+                                    amount = uiState.summary.costTotal,
+                                    amountFormatter = amountFormatter,
+                                    icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                                    emphasis = false,
+                                )
+                                DashboardKpiCard(
+                                    title = stringResource(R.string.dashboard_profit_label),
+                                    amount = uiState.summary.profitTotal,
+                                    amountFormatter = amountFormatter,
+                                    icon = Icons.Outlined.EmojiEvents,
+                                    emphasis = true,
+                                )
+                            }
+                            if (uiState.isSummaryUpdating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    strokeWidth = 3.dp,
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
 
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else {
-                item {
-                    DashboardKpiCard(
-                        title = stringResource(R.string.dashboard_income_label),
-                        amount = uiState.summary.incomeTotal,
-                    )
-                }
-                item {
-                    DashboardKpiCard(
-                        title = stringResource(R.string.dashboard_cost_label),
-                        amount = uiState.summary.costTotal,
-                    )
-                }
-                item {
-                    DashboardKpiCard(
-                        title = stringResource(R.string.dashboard_profit_label),
-                        amount = uiState.summary.profitTotal,
-                    )
-                }
-            }
+@Composable
+private fun DashboardErrorBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.errorContainer,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ErrorOutline,
+                contentDescription = stringResource(R.string.dashboard_error_icon_a11y),
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
 
-            if (uiState.errorMessage != null) {
-                item {
-                    Text(
-                        text = uiState.errorMessage.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+@Composable
+private fun DashboardPeriodHeroCard(periodText: String) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.dashboard_period_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = periodText,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.dashboard_period_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WarehouseExposedDropdown(
+    selectedLabel: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelectAllWarehouses: () -> Unit,
+    warehouses: List<DashboardWarehouse>,
+    onSelectWarehouse: (Long) -> Unit,
+) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.sales_warehouse_label)) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.dashboard_all_warehouses_option)) },
+                onClick = onSelectAllWarehouses,
+            )
+            warehouses.forEach { warehouse ->
+                DropdownMenuItem(
+                    text = { Text(warehouse.name) },
+                    onClick = { onSelectWarehouse(warehouse.id) },
+                )
             }
-            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardKpiSkeletonCard() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(92.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.45f)
+                    .height(14.dp),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {}
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.65f)
+                    .height(22.dp),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {}
         }
     }
 }
@@ -197,24 +346,70 @@ fun DashboardScreen(
 private fun DashboardKpiCard(
     title: String,
     amount: Double,
+    amountFormatter: NumberFormat,
+    icon: ImageVector,
+    emphasis: Boolean,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    val formatted = amountFormatter.format(amount)
+    val rowA11y = stringResource(R.string.dashboard_kpi_row_a11y, title, formatted)
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = rowA11y },
+        shape = MaterialTheme.shapes.large,
+        colors = if (emphasis) {
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        } else {
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
+            )
+        },
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = if (emphasis) 3.dp else 1.dp,
+        ),
+    ) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (emphasis) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(26.dp),
             )
-            Text(
-                text = stringResource(R.string.dashboard_amount_value, amount),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (emphasis) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = formatted,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

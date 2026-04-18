@@ -82,9 +82,12 @@
     <string name="reports_other_total_value">Outro: %1$.2f</string>
     <string name="dashboard_screen_title">Dashboard</string>
     <string name="dashboard_period_label">Mês atual</string>
+    <string name="dashboard_period_subtitle">Resumo da demonstração mensal de resultados</string>
     <string name="dashboard_all_warehouses_option">Todos os depósitos</string>
     <string name="dashboard_income_label">Receita</string>
     <string name="dashboard_cost_label">Custo</string>
     <string name="dashboard_profit_label">Lucro</string>
     <string name="dashboard_amount_value">%1$.2f</string>
+    <string name="dashboard_error_icon_a11y">Erro</string>
+    <string name="dashboard_kpi_row_a11y">%1$s: %2$s</string>
 </resources>

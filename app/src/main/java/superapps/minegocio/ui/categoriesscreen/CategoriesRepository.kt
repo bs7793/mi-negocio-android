@@ -52,7 +52,7 @@ class CategoriesRepository(
 
     suspend fun createCategory(name: String, description: String?): Category = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = CategoryInsertPayload(
             workspaceId = workspaceId,
             name = name.trim(),
@@ -64,17 +64,25 @@ class CategoriesRepository(
 
     suspend fun updateCategory(id: Long, name: String, description: String?): Category = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = CategoryUpdatePayload(
             name = name.trim(),
             description = description?.trim().takeUnless { it.isNullOrBlank() },
         )
         val encodedId = id.toString().urlEncode()
+        val encodedWorkspace = workspaceId.urlEncode()
         val endpoint =
             "${SupabaseProvider.restUrl}/categories" +
                 "?id=eq.$encodedId" +
+                "&workspace_id=eq.$encodedWorkspace" +
                 "&select=id,workspace_id,name,description"
         patch(endpoint, payload)
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private suspend fun primaryWorkspaceId(): String {

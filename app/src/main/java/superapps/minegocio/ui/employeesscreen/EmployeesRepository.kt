@@ -59,8 +59,9 @@ class EmployeesRepository(
 
     suspend fun fetchEmployees(): List<Employee> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val body = json.encodeToString(
-            ListMembersPayload(workspaceId = WorkspaceSelectionStore.selectedWorkspaceId),
+            ListMembersPayload(workspaceId = workspaceId),
         )
         postRpcList(
             rpcName = "list_workspace_members",
@@ -70,9 +71,10 @@ class EmployeesRepository(
 
     suspend fun createInviteCode(role: String): InviteCodeResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = CreateInviteCodePayload(
             role = role.trim(),
-            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
+            workspaceId = workspaceId,
         )
         postInviteCodeMutation(
             rpcName = "create_workspace_invite_code",
@@ -83,9 +85,10 @@ class EmployeesRepository(
 
     suspend fun listInviteCodes(): List<WorkspaceInviteCode> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/list_workspace_invite_codes"
         val body = json.encodeToString(
-            ListInviteCodesPayload(workspaceId = WorkspaceSelectionStore.selectedWorkspaceId),
+            ListInviteCodesPayload(workspaceId = workspaceId),
         )
         val first = postRaw(endpoint = endpoint, body = body)
         val result = if (first.code == 401) postRaw(endpoint = endpoint, body = body, forceRefresh = true) else first
@@ -97,9 +100,10 @@ class EmployeesRepository(
 
     suspend fun revokeInviteCode(inviteCode: String): EmployeeMutationResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = RevokeInviteCodePayload(
             inviteCode = inviteCode.trim().uppercase(),
-            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
+            workspaceId = workspaceId,
         )
         postEmployeeMutation(
             rpcName = "revoke_workspace_invite_code",
@@ -130,11 +134,12 @@ class EmployeesRepository(
         status: String,
     ): EmployeeMutationResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = UpdateEmployeePayload(
             targetUserId = targetUserId,
             role = role.trim(),
             status = status.trim(),
-            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
+            workspaceId = workspaceId,
         )
         postEmployeeMutation(
             rpcName = "update_workspace_member_role_status",
@@ -213,6 +218,12 @@ class EmployeesRepository(
             throw IOException(parseSupabaseError(rawBody, "$fallbackLabel ($code)"))
         }
         return json.decodeFromString(rawBody)
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private suspend fun postRaw(

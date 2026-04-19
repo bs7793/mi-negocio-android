@@ -94,13 +94,14 @@ class ProductsRepository(
         imageUpload: ProductImageUpload? = null,
     ): Product = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val payloadWithImage = if (imageUpload != null) {
             payload.copy(imageUrl = uploadProductImage(imageUpload))
         } else {
             payload
         }
         val workspaceScopedPayload = payloadWithImage.copy(
-            workspaceId = payloadWithImage.workspaceId ?: WorkspaceSelectionStore.selectedWorkspaceId,
+            workspaceId = payloadWithImage.workspaceId ?: workspaceId,
         )
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_product_with_variants"
         val body = json.encodeToString(CreateProductRpcPayload(payload = workspaceScopedPayload))
@@ -117,13 +118,14 @@ class ProductsRepository(
         previousImageUrl: String? = null,
     ): UpdateProductBasicResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val payloadWithImage = if (imageUpload != null) {
             payload.copy(imageUrl = uploadProductImage(imageUpload))
         } else {
             payload
         }
         val workspaceScopedPayload = payloadWithImage.copy(
-            workspaceId = payloadWithImage.workspaceId ?: WorkspaceSelectionStore.selectedWorkspaceId,
+            workspaceId = payloadWithImage.workspaceId ?: workspaceId,
         )
         val endpoint = "${SupabaseProvider.restUrl}/rpc/update_product_basic"
         val body = json.encodeToString(UpdateProductBasicRpcPayload(payload = workspaceScopedPayload))
@@ -198,6 +200,12 @@ class ProductsRepository(
         cachedWorkspaceId = id
         cachedWorkspaceForUserId = uid
         return id
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private suspend fun post(endpoint: String, body: String): HttpResult {

@@ -414,8 +414,77 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.create_sale_with_lines_and_payments(
+  p_payload JSONB,
+  p_workspace_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_workspace_id UUID := COALESCE(p_workspace_id, NULLIF(TRIM(p_payload->>'workspace_id'), '')::UUID, public.get_my_primary_workspace_id());
+  v_payload JSONB := COALESCE(p_payload, '{}'::JSONB);
+BEGIN
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'workspace_required';
+  END IF;
+
+  v_payload := v_payload || jsonb_build_object('workspace_id', v_workspace_id::TEXT);
+  RETURN public.create_sale_with_lines_and_payments(v_payload);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_product_with_variants(
+  p_payload JSONB,
+  p_workspace_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_workspace_id UUID := COALESCE(p_workspace_id, NULLIF(TRIM(p_payload->>'workspace_id'), '')::UUID, public.get_my_primary_workspace_id());
+  v_payload JSONB := COALESCE(p_payload, '{}'::JSONB);
+BEGIN
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'workspace_required';
+  END IF;
+
+  v_payload := v_payload || jsonb_build_object('workspace_id', v_workspace_id::TEXT);
+  RETURN public.create_product_with_variants(v_payload);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_product_basic(
+  p_payload JSONB,
+  p_workspace_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_workspace_id UUID := COALESCE(p_workspace_id, NULLIF(TRIM(p_payload->>'workspace_id'), '')::UUID, public.get_my_primary_workspace_id());
+  v_payload JSONB := COALESCE(p_payload, '{}'::JSONB);
+BEGIN
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'workspace_required';
+  END IF;
+
+  v_payload := v_payload || jsonb_build_object('workspace_id', v_workspace_id::TEXT);
+  RETURN public.update_product_basic(v_payload);
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.list_workspace_members(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_workspace_invite_code(TEXT, INT, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_workspace_invite_codes(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.revoke_workspace_invite_code(TEXT, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_workspace_member_role_status(UUID, TEXT, TEXT, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_sale_with_lines_and_payments(JSONB, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_product_with_variants(JSONB, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_product_basic(JSONB, UUID) TO authenticated;

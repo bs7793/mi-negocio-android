@@ -66,10 +66,11 @@ class SalesRepository(
         payments: List<SaleCreatePaymentInput>,
     ): SaleCreateResponse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_sale_with_lines_and_payments"
         val payload = CreateSaleRpcPayload(
             payload = CreateSalePayload(
-                workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
+                workspaceId = workspaceId,
                 warehouseId = warehouseId,
                 customerName = customerName?.trim().takeUnless { it.isNullOrBlank() },
                 notes = notes?.trim().takeUnless { it.isNullOrBlank() },
@@ -122,6 +123,12 @@ class SalesRepository(
         cachedWorkspaceId = id
         cachedWorkspaceForUserId = uid
         return id
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private fun execute(

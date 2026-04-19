@@ -70,7 +70,7 @@ class WarehousesRepository(
         position: String?,
     ): Warehouse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = WarehouseInsertPayload(
             workspaceId = workspaceId,
             name = name.trim(),
@@ -96,7 +96,7 @@ class WarehousesRepository(
         position: String?,
     ): Warehouse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val payload = WarehouseUpdatePayload(
             name = name.trim(),
             location = location?.trim().takeUnless { it.isNullOrBlank() },
@@ -106,11 +106,19 @@ class WarehousesRepository(
             position = position?.trim().takeUnless { it.isNullOrBlank() },
         )
         val encodedId = id.toString().urlEncode()
+        val encodedWorkspace = workspaceId.urlEncode()
         val endpoint =
             "${SupabaseProvider.restUrl}/warehouses" +
                 "?id=eq.$encodedId" +
+                "&workspace_id=eq.$encodedWorkspace" +
                 "&select=id,workspace_id,name,location,aisle,shelf,level,position"
         patch(endpoint, payload)
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private suspend fun primaryWorkspaceId(): String {

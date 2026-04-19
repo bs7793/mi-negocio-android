@@ -1,5 +1,8 @@
 package superapps.minegocio.ui.dashboardscreen
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -71,6 +76,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var warehouseMenuOpen by rememberSaveable { mutableStateOf(false) }
     val selectedWarehouseName = when (uiState.selectedWarehouseId) {
         ALL_WAREHOUSES_OPTION_ID -> stringResource(R.string.dashboard_all_warehouses_option)
@@ -86,6 +92,29 @@ fun DashboardScreen(
         NumberFormat.getNumberInstance(locale).apply {
             minimumFractionDigits = 2
             maximumFractionDigits = 2
+        }
+    }
+    val shareReceiptChooserTitle = stringResource(R.string.dashboard_receipt_share_chooser_title)
+
+    LaunchedEffect(uiState.receiptShareUrl) {
+        val receiptUrl = uiState.receiptShareUrl ?: return@LaunchedEffect
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, receiptUrl)
+        }
+        val openIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse(receiptUrl), "application/pdf")
+            addCategory(Intent.CATEGORY_BROWSABLE)
+        }
+        val chooser = Intent.createChooser(sendIntent, shareReceiptChooserTitle).apply {
+            putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(openIntent))
+        }
+        try {
+            context.startActivity(chooser)
+        } catch (_: ActivityNotFoundException) {
+            // No compatible app installed. Keep this silent by design.
+        } finally {
+            viewModel.onReceiptShared()
         }
     }
 
@@ -262,6 +291,10 @@ fun DashboardScreen(
                 detail = uiState.saleDetail,
                 errorMessage = uiState.saleDetailError,
                 onRetry = { viewModel.retrySaleDetail() },
+                isReceiptGenerating = uiState.isReceiptGenerating,
+                receiptErrorMessage = uiState.receiptErrorMessage,
+                onCreateReceipt = { viewModel.createReceiptForSelectedSale() },
+                onDismissReceiptError = { viewModel.clearReceiptError() },
                 amountFormatter = amountFormatter,
                 locale = locale,
             )

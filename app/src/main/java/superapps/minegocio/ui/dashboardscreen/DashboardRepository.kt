@@ -86,6 +86,22 @@ class DashboardRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
+    suspend fun createSaleReceipt(saleId: Long): String = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.functionsUrl}/generate-sale-receipt"
+        val body = json.encodeToString(CreateSaleReceiptRequest(saleId = saleId))
+        val result = post(endpoint, body)
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to generate sale receipt (${result.code})"))
+        }
+        val payload = runCatching { json.decodeFromString<CreateSaleReceiptResponse>(result.body) }.getOrNull()
+        val receiptUrl = payload?.receiptUrl ?: payload?.url
+        if (receiptUrl.isNullOrBlank()) {
+            throw IOException("Receipt generated but no share URL was returned")
+        }
+        return@withContext receiptUrl
+    }
+
     private suspend fun get(endpoint: String): HttpResult {
         val token = authSessionManager.getSupabaseAccessTokenOrNull(forceRefresh = false)
             ?: return HttpResult(401, """{"message":"No active Supabase session"}""")
@@ -198,4 +214,18 @@ private data class GetDashboardSalesFeedPayload(
 private data class GetDashboardSaleDetailPayload(
     @SerialName("p_sale_id")
     val saleId: Long,
+)
+
+@Serializable
+private data class CreateSaleReceiptRequest(
+    @SerialName("sale_id")
+    val saleId: Long,
+)
+
+@Serializable
+private data class CreateSaleReceiptResponse(
+    @SerialName("receipt_url")
+    val receiptUrl: String? = null,
+    @SerialName("url")
+    val url: String? = null,
 )

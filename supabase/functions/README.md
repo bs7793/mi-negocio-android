@@ -1,8 +1,16 @@
 # Supabase Edge Functions
 
-No project-specific edge functions are required in the Supabase Auth + PostgREST architecture.
+## Project Functions
 
-Categories CRUD is handled directly from the Android client using Supabase Auth sessions and RLS.
+- `generate-sale-receipt`
+  - **Route:** `${SUPABASE_FUNCTIONS_URL}/generate-sale-receipt`
+  - **Method:** `POST`
+  - **Auth:** `Authorization: Bearer <access_token>` required
+  - **Input JSON:** `{ "sale_id": <number> }`
+  - **Success JSON:** `{ "receipt_url": "<signed_url>", "path": "<storage_path>", "expires_in_seconds": 1800 }`
+  - **Storage dependency:** private bucket `sale-receipts`
+
+This function fetches sale detail using user-scoped access (RLS), generates a PDF receipt, uploads it to Storage, and returns a signed URL valid for 30 minutes.
 
 ## Maintenance
 

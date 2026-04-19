@@ -36,6 +36,9 @@ data class DashboardUiState(
     val isSaleDetailLoading: Boolean = false,
     val saleDetail: DashboardSaleDetail? = null,
     val saleDetailError: String? = null,
+    val isReceiptGenerating: Boolean = false,
+    val receiptShareUrl: String? = null,
+    val receiptErrorMessage: String? = null,
 )
 
 class DashboardViewModel(
@@ -47,6 +50,7 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private var refreshJob: Job? = null
     private var saleDetailJob: Job? = null
+    private var receiptJob: Job? = null
     private var latestRefreshRequestId: Long = 0
     private var refreshingWarehouseFilter: Long? = null
 
@@ -242,6 +246,8 @@ class DashboardViewModel(
 
     fun openSaleDetail(saleId: Long) {
         saleDetailJob?.cancel()
+        receiptJob?.cancel()
+        receiptJob = null
         saleDetailJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -249,6 +255,9 @@ class DashboardViewModel(
                     isSaleDetailLoading = true,
                     saleDetail = null,
                     saleDetailError = null,
+                    isReceiptGenerating = false,
+                    receiptShareUrl = null,
+                    receiptErrorMessage = null,
                 )
             }
             try {
@@ -280,12 +289,17 @@ class DashboardViewModel(
     fun closeSaleDetail() {
         saleDetailJob?.cancel()
         saleDetailJob = null
+        receiptJob?.cancel()
+        receiptJob = null
         _uiState.update {
             it.copy(
                 selectedSaleId = null,
                 isSaleDetailLoading = false,
                 saleDetail = null,
                 saleDetailError = null,
+                isReceiptGenerating = false,
+                receiptShareUrl = null,
+                receiptErrorMessage = null,
             )
         }
     }
@@ -293,5 +307,48 @@ class DashboardViewModel(
     fun retrySaleDetail() {
         val id = _uiState.value.selectedSaleId ?: return
         openSaleDetail(id)
+    }
+
+    fun createReceiptForSelectedSale() {
+        val currentState = _uiState.value
+        if (currentState.isReceiptGenerating) return
+        val saleId = currentState.saleDetail?.saleId ?: currentState.selectedSaleId ?: return
+        receiptJob?.cancel()
+        receiptJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isReceiptGenerating = true,
+                    receiptShareUrl = null,
+                    receiptErrorMessage = null,
+                )
+            }
+            try {
+                val shareUrl = repository.createSaleReceipt(saleId)
+                _uiState.update {
+                    it.copy(
+                        isReceiptGenerating = false,
+                        receiptShareUrl = shareUrl,
+                        receiptErrorMessage = null,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isReceiptGenerating = false,
+                        receiptErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearReceiptError() {
+        _uiState.update { it.copy(receiptErrorMessage = null) }
+    }
+
+    fun onReceiptShared() {
+        _uiState.update { it.copy(receiptShareUrl = null) }
     }
 }

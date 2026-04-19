@@ -18,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +47,10 @@ fun DashboardSaleDetailBottomSheet(
     detail: DashboardSaleDetail?,
     errorMessage: String?,
     onRetry: () -> Unit,
+    isReceiptGenerating: Boolean,
+    receiptErrorMessage: String?,
+    onCreateReceipt: () -> Unit,
+    onDismissReceiptError: () -> Unit,
     amountFormatter: NumberFormat,
     locale: Locale,
 ) {
@@ -109,6 +114,64 @@ fun DashboardSaleDetailBottomSheet(
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold,
                         )
+                    }
+
+                    item {
+                        Button(
+                            onClick = onCreateReceipt,
+                            enabled = !isReceiptGenerating,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (isReceiptGenerating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = stringResource(R.string.dashboard_receipt_creating),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            } else {
+                                Text(text = stringResource(R.string.dashboard_receipt_create))
+                            }
+                        }
+                    }
+
+                    if (receiptErrorMessage != null) {
+                        item {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.errorContainer,
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.dashboard_receipt_error_title),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        text = receiptErrorMessage.ifBlank {
+                                            stringResource(R.string.dashboard_receipt_error_text)
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = onDismissReceiptError) {
+                                            Text(stringResource(R.string.dashboard_receipt_dismiss))
+                                        }
+                                        Button(onClick = onCreateReceipt, enabled = !isReceiptGenerating) {
+                                            Text(stringResource(R.string.dashboard_receipt_retry))
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     item {

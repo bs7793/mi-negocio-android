@@ -77,11 +77,17 @@ fun InviteEmployeeBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 AssistChip(
-                    onClick = { role = "member" },
+                    onClick = {
+                        role = "member"
+                        if (errorMessage != null) onClearError()
+                    },
                     label = { Text(stringResource(R.string.employees_role_member)) },
                 )
                 AssistChip(
-                    onClick = { role = "admin" },
+                    onClick = {
+                        role = "admin"
+                        if (errorMessage != null) onClearError()
+                    },
                     label = { Text(stringResource(R.string.employees_role_admin)) },
                 )
             }

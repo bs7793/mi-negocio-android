@@ -2,11 +2,14 @@ package superapps.minegocio.ui.categoriesscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 
 data class CategoriesUiState(
     val isLoading: Boolean = true,
@@ -16,6 +19,7 @@ data class CategoriesUiState(
     val createErrorMessage: String? = null,
     val isUpdatingCategory: Boolean = false,
     val updateErrorMessage: String? = null,
+    val activeWorkspaceId: String? = null,
 )
 
 class CategoriesViewModel(
@@ -24,24 +28,50 @@ class CategoriesViewModel(
 
     private val _uiState = MutableStateFlow(CategoriesUiState())
     val uiState: StateFlow<CategoriesUiState> = _uiState.asStateFlow()
+    private var activeWorkspaceId: String? = WorkspaceSelectionStore.selectedWorkspaceId
 
     init {
         load()
+        observeWorkspaceChanges()
+    }
+
+    private fun observeWorkspaceChanges() {
+        viewModelScope.launch {
+            WorkspaceScopeInvalidationBus.workspaceChanges.collectLatest { workspaceId ->
+                if (workspaceId == activeWorkspaceId) return@collectLatest
+                activeWorkspaceId = workspaceId
+                _uiState.update { it.copy(activeWorkspaceId = workspaceId) }
+                load()
+            }
+        }
     }
 
     fun load() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val workspaceId = activeWorkspaceId
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    activeWorkspaceId = workspaceId,
+                )
+            }
             try {
                 val list = repository.fetchCategories()
                 _uiState.update {
-                    it.copy(isLoading = false, categories = list, errorMessage = null)
+                    it.copy(
+                        isLoading = false,
+                        categories = list,
+                        errorMessage = null,
+                        activeWorkspaceId = workspaceId,
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         errorMessage = e.message ?: e.toString(),
+                        activeWorkspaceId = workspaceId,
                     )
                 }
             }

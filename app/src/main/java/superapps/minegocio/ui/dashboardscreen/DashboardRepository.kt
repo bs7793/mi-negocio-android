@@ -22,12 +22,10 @@ class DashboardRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    private var cachedWorkspaceId: String? = null
-    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchWarehouses(): List<DashboardWarehouse> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint =
             "${SupabaseProvider.restUrl}/warehouses" +
                 "?select=id,workspace_id,name" +
@@ -40,33 +38,16 @@ class DashboardRepository(
         return@withContext json.decodeFromString(result.body)
     }
 
-    private suspend fun primaryWorkspaceId(): String {
-        val uid = authSessionManager.currentUserIdOrNull()
-        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
-        if (!selectedWorkspaceId.isNullOrBlank()) {
-            cachedWorkspaceId = selectedWorkspaceId
-            cachedWorkspaceForUserId = uid
-            return selectedWorkspaceId
-        }
-        if (cachedWorkspaceId != null && uid != null && cachedWorkspaceForUserId == uid) {
-            return cachedWorkspaceId!!
-        }
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
-        val result = post(endpoint, "{}")
-        if (result.code !in 200..299) {
-            throw IOException(parseSupabaseError(result.body, "Failed to resolve workspace (${result.code})"))
-        }
-        val id = result.body.trim().removePrefix("\"").removeSuffix("\"")
-        if (id.isBlank()) throw IOException("Workspace id response was empty")
-        cachedWorkspaceId = id
-        cachedWorkspaceForUserId = uid
-        return id
-    }
-
     suspend fun fetchSaleDetail(saleId: Long): DashboardSaleDetail = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_dashboard_sale_detail"
-        val body = json.encodeToString(GetDashboardSaleDetailPayload(saleId = saleId))
+        val body = json.encodeToString(
+            GetDashboardSaleDetailPayload(
+                saleId = saleId,
+                workspaceId = workspaceId,
+            ),
+        )
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to fetch sale detail (${result.code})"))
@@ -80,6 +61,7 @@ class DashboardRepository(
         limit: Int = 50,
     ): List<DashboardSalesFeedItem> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_dashboard_sales_feed"
         val monthlyRange = calculateLocalMonthRange(zoneId)
         val body = json.encodeToString(
@@ -88,6 +70,7 @@ class DashboardRepository(
                 startAt = monthlyRange.startAt,
                 endAt = monthlyRange.endAt,
                 limit = limit,
+                workspaceId = workspaceId,
             ),
         )
         val result = post(endpoint, body)
@@ -102,6 +85,7 @@ class DashboardRepository(
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): DashboardIncomeStatementSummary = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_income_statement_monthly_summary"
         val monthlyRange = calculateLocalMonthRange(zoneId)
         val body = json.encodeToString(
@@ -109,6 +93,7 @@ class DashboardRepository(
                 warehouseId = warehouseId,
                 startAt = monthlyRange.startAt,
                 endAt = monthlyRange.endAt,
+                workspaceId = workspaceId,
             ),
         )
         val result = post(endpoint, body)
@@ -132,6 +117,12 @@ class DashboardRepository(
             throw IOException("Receipt generated but no share URL was returned")
         }
         return@withContext receiptUrl
+    }
+
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private suspend fun get(endpoint: String): HttpResult {
@@ -230,6 +221,8 @@ private data class GetIncomeStatementMonthlySummaryPayload(
     val startAt: String? = null,
     @SerialName("p_end_at")
     val endAt: String? = null,
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
 )
 
 @Serializable
@@ -242,12 +235,16 @@ private data class GetDashboardSalesFeedPayload(
     val endAt: String? = null,
     @SerialName("p_limit")
     val limit: Int = 50,
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
 )
 
 @Serializable
 private data class GetDashboardSaleDetailPayload(
     @SerialName("p_sale_id")
     val saleId: Long,
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
 )
 
 @Serializable

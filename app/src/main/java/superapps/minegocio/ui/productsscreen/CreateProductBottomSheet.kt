@@ -279,6 +279,7 @@ fun CreateProductBottomSheet(
                         onClick = {
                             selectedCategoryId = null
                             isCategoryMenuOpen = false
+                            if (errorMessage != null) onClearError()
                         },
                     )
                     categories.forEach { category ->
@@ -287,6 +288,7 @@ fun CreateProductBottomSheet(
                             onClick = {
                                 selectedCategoryId = category.id
                                 isCategoryMenuOpen = false
+                                if (errorMessage != null) onClearError()
                             },
                         )
                     }
@@ -350,6 +352,7 @@ fun CreateProductBottomSheet(
                         onClick = {
                             selectedImageUri = null
                             selectedImageUpload = null
+                            if (errorMessage != null) onClearError()
                         },
                         enabled = !isSubmitting && !isPreparingImage,
                     ) {
@@ -401,6 +404,7 @@ fun CreateProductBottomSheet(
                                 IconButton(
                                     onClick = {
                                         variants = variants.filterIndexed { i, _ -> i != index }
+                                        if (errorMessage != null) onClearError()
                                     },
                                 ) {
                                     Icon(Icons.Default.Close, contentDescription = null)
@@ -466,6 +470,7 @@ fun CreateProductBottomSheet(
                                 variants = variants.mapIndexed { i, item ->
                                     if (i == index) item.copy(barcode = value) else item
                                 }
+                                if (errorMessage != null) onClearError()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.products_field_barcode)) },
@@ -506,6 +511,7 @@ fun CreateProductBottomSheet(
                                             }
                                         }
                                         typeMenuIndexOpen = null
+                                        if (errorMessage != null) onClearError()
                                     },
                                 )
                                 localOptionTypes.forEach { optionType ->
@@ -525,6 +531,7 @@ fun CreateProductBottomSheet(
                                                 }
                                             }
                                             typeMenuIndexOpen = null
+                                            if (errorMessage != null) onClearError()
                                         },
                                     )
                                 }
@@ -555,6 +562,7 @@ fun CreateProductBottomSheet(
                                             if (i == index) item.copy(selectedOptionValue = null) else item
                                         }
                                         valueMenuIndexOpen = null
+                                        if (errorMessage != null) onClearError()
                                     },
                                 )
                                 selectedType?.values.orEmpty().forEach { optionValue ->
@@ -565,6 +573,7 @@ fun CreateProductBottomSheet(
                                                 if (i == index) item.copy(selectedOptionValue = optionValue.value) else item
                                             }
                                             valueMenuIndexOpen = null
+                                            if (errorMessage != null) onClearError()
                                         },
                                     )
                                 }
@@ -687,6 +696,7 @@ fun CreateProductBottomSheet(
                                             item
                                         }
                                     }
+                                    if (errorMessage != null) onClearError()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 label = { Text(warehouse.name) },

@@ -6,9 +6,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.io.IOException
@@ -35,12 +32,10 @@ class CategoriesRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    private var cachedWorkspaceId: String? = null
-    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchCategories(): List<Category> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val encodedWorkspace = workspaceId.urlEncode()
         val endpoint =
             "${SupabaseProvider.restUrl}/categories" +
@@ -83,77 +78,6 @@ class CategoriesRepository(
         return WorkspaceSelectionStore.selectedWorkspaceId
             ?.takeIf { it.isNotBlank() }
             ?: throw IOException("Selecciona un workspace antes de continuar.")
-    }
-
-    private suspend fun primaryWorkspaceId(): String {
-        val uid = authSessionManager.currentUserIdOrNull()
-        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
-        if (!selectedWorkspaceId.isNullOrBlank()) {
-            cachedWorkspaceId = selectedWorkspaceId
-            cachedWorkspaceForUserId = uid
-            return selectedWorkspaceId
-        }
-        if (
-            cachedWorkspaceId != null &&
-            uid != null &&
-            cachedWorkspaceForUserId == uid
-        ) {
-            return cachedWorkspaceId!!
-        }
-        val id = fetchPrimaryWorkspaceId()
-        cachedWorkspaceId = id
-        cachedWorkspaceForUserId = uid
-        return id
-    }
-
-    private suspend fun fetchPrimaryWorkspaceId(): String {
-        return try {
-            val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
-            val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
-            val first = executePostEmpty(endpoint, token)
-            if (first.code != 401) {
-                parseWorkspaceRpcResponse(first.code, first.body)
-            } else {
-                val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
-                val retry = executePostEmpty(endpoint, refreshed)
-                parseWorkspaceRpcResponse(retry.code, retry.body)
-            }
-        } catch (e: Exception) {
-            reportWorkspaceResolutionToCrashlytics(e)
-            throw e
-        }
-    }
-
-    private fun parseWorkspaceRpcResponse(code: Int, body: String): String {
-        if (code !in 200..299) {
-            throw IOException(parseSupabaseError(body, "Failed to resolve workspace ($code)"))
-        }
-        val trimmed = body.trim()
-        if (trimmed.isEmpty()) {
-            throw IOException("Workspace id response was empty")
-        }
-        val element = try {
-            json.parseToJsonElement(trimmed)
-        } catch (e: Exception) {
-            throw IOException(
-                parseSupabaseError(trimmed, "Invalid JSON in workspace response"),
-                e,
-            )
-        }
-        return when (element) {
-            JsonNull -> throw IOException("Workspace id was null")
-            is JsonPrimitive -> {
-                if (!element.isString) {
-                    throw IOException("Workspace id must be a JSON string, got: ${element.content}")
-                }
-                val id = element.content
-                if (id.isBlank()) {
-                    throw IOException("Workspace id was empty")
-                }
-                id
-            }
-            else -> throw IOException("Expected a JSON string scalar for workspace id")
-        }
     }
 
     private suspend fun get(
@@ -278,11 +202,6 @@ class CategoriesRepository(
         }
     }
 
-    private fun executePostEmpty(
-        endpoint: String,
-        accessToken: String,
-    ): HttpResult = executePost(endpoint, "{}", accessToken)
-
     private fun handleGetResponse(code: Int, body: String): List<Category> {
         if (code !in 200..299) {
             throw IOException(parseSupabaseError(body, "Failed to fetch categories ($code)"))
@@ -327,13 +246,3 @@ private fun parseSupabaseError(rawBody: String, fallback: String): String {
     }
 }
 
-private fun reportWorkspaceResolutionToCrashlytics(throwable: Throwable) {
-    try {
-        FirebaseCrashlytics.getInstance().apply {
-            log("workspace_rpc get_my_primary_workspace_id failed")
-            recordException(throwable)
-        }
-    } catch (_: Exception) {
-        // Avoid masking the original error if Crashlytics is unavailable.
-    }
-}

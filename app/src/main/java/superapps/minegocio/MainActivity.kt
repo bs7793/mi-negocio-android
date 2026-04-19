@@ -66,6 +66,12 @@ private fun appDestinationFromSavedName(name: String?): AppDestinations {
     return runCatching { AppDestinations.valueOf(name) }.getOrElse { AppDestinations.DASHBOARD }
 }
 
+private fun isInviteError(message: String?): Boolean {
+    if (message.isNullOrBlank()) return false
+    return message.contains("invite", ignoreCase = true) ||
+        message.contains("code", ignoreCase = true)
+}
+
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -227,6 +233,8 @@ fun MyApplicationApp() {
                             },
                             onSignOut = { authViewModel.signOutAndContinueAnonymously() },
                             onDismissAuthError = { authViewModel.clearError() },
+                            sessionErrorMessage = workspaceSessionUiState.errorMessage,
+                            onDismissSessionError = { workspaceSessionViewModel.clearError() },
                             onOpenCategories = {
                                 navController.navigate(ProfileNavRoutes.CATEGORIES)
                             },
@@ -242,7 +250,7 @@ fun MyApplicationApp() {
                             onOpenEmployees = {
                                 navController.navigate(ProfileNavRoutes.EMPLOYEES)
                             },
-                            inviteCodeError = authUiState.errorMessage,
+                            inviteCodeError = authUiState.errorMessage.takeIf { isInviteError(it) },
                             isSubmittingInviteCode = authUiState.isLoading,
                             workspaceName = workspaceSessionUiState.selectedWorkspaceName,
                             workspaces = workspaceSessionUiState.workspaces,

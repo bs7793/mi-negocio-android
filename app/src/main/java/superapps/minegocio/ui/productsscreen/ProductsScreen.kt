@@ -84,6 +84,17 @@ fun ProductsScreen(
             updateSubmitAttempted = false
         }
     }
+    LaunchedEffect(uiState.activeWorkspaceId) {
+        isCreateSheetOpen = false
+        editingProduct = null
+        searchQuery = ""
+        selectedCategoryId = null
+        selectedWarehouseId = null
+        createSubmitAttempted = false
+        updateSubmitAttempted = false
+        categoryMenuOpen = false
+        warehouseMenuOpen = false
+    }
 
     BackHandler(onBack = onNavigateUp)
 

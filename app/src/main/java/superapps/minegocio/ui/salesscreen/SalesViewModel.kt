@@ -3,13 +3,16 @@ package superapps.minegocio.ui.salesscreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import superapps.minegocio.ui.SalesSummaryInvalidationBus
+import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
 import superapps.minegocio.ui.warehousesscreen.Warehouse
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import kotlin.math.max
 
 data class SalesUiState(
@@ -26,6 +29,7 @@ data class SalesUiState(
     val paymentDraft: SalesPaymentDraft = SalesPaymentDraft(),
     val errorMessage: String? = null,
     val successMessage: String? = null,
+    val activeWorkspaceId: String? = null,
 ) {
     val cartTotal: Double
         get() = cartItems.sumOf { it.lineTotal }
@@ -36,9 +40,34 @@ class SalesViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SalesUiState())
     val uiState: StateFlow<SalesUiState> = _uiState.asStateFlow()
+    private var activeWorkspaceId: String? = WorkspaceSelectionStore.selectedWorkspaceId
 
     init {
         loadInitial()
+        observeWorkspaceChanges()
+    }
+
+    private fun observeWorkspaceChanges() {
+        viewModelScope.launch {
+            WorkspaceScopeInvalidationBus.workspaceChanges.collectLatest { workspaceId ->
+                if (workspaceId == activeWorkspaceId) return@collectLatest
+                activeWorkspaceId = workspaceId
+                _uiState.update {
+                    it.copy(
+                        cartItems = emptyList(),
+                        searchQuery = "",
+                        hasSearched = false,
+                        customerNameInput = "Public",
+                        notesInput = "",
+                        paymentDraft = SalesPaymentDraft(),
+                        errorMessage = null,
+                        successMessage = null,
+                        activeWorkspaceId = workspaceId,
+                    )
+                }
+                loadInitial()
+            }
+        }
     }
 
     fun loadInitial() {
@@ -62,6 +91,7 @@ class SalesViewModel(
                         selectedWarehouseId = selectedWarehouseId,
                         variants = variants.items,
                         paymentDraft = it.paymentDraft.copy(amountInput = formatAmount(it.cartTotal)),
+                        activeWorkspaceId = activeWorkspaceId,
                     )
                 }
             } catch (e: Exception) {

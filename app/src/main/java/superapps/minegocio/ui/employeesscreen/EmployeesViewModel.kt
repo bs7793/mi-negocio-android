@@ -2,11 +2,14 @@ package superapps.minegocio.ui.employeesscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 
 data class EmployeesUiState(
     val isLoading: Boolean = true,
@@ -20,6 +23,7 @@ data class EmployeesUiState(
     val updateErrorMessage: String? = null,
     val isAcceptingInviteCode: Boolean = false,
     val acceptInviteErrorMessage: String? = null,
+    val activeWorkspaceId: String? = null,
 )
 
 class EmployeesViewModel(
@@ -27,9 +31,29 @@ class EmployeesViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(EmployeesUiState())
     val uiState: StateFlow<EmployeesUiState> = _uiState.asStateFlow()
+    private var activeWorkspaceId: String? = WorkspaceSelectionStore.selectedWorkspaceId
 
     init {
         load()
+        observeWorkspaceChanges()
+    }
+
+    private fun observeWorkspaceChanges() {
+        viewModelScope.launch {
+            WorkspaceScopeInvalidationBus.workspaceChanges.collectLatest { workspaceId ->
+                if (workspaceId == activeWorkspaceId) return@collectLatest
+                activeWorkspaceId = workspaceId
+                _uiState.update {
+                    it.copy(
+                        activeWorkspaceId = workspaceId,
+                        inviteErrorMessage = null,
+                        latestInviteCode = null,
+                        acceptInviteErrorMessage = null,
+                    )
+                }
+                load()
+            }
+        }
     }
 
     fun load() {
@@ -44,6 +68,7 @@ class EmployeesViewModel(
                         employees = list,
                         inviteCodes = codes,
                         errorMessage = null,
+                        activeWorkspaceId = activeWorkspaceId,
                     )
                 }
             } catch (e: Exception) {

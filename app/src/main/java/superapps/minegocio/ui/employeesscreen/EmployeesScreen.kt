@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,6 +51,10 @@ fun EmployeesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isInviteOpen by rememberSaveable { mutableStateOf(false) }
     var acceptCode by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(uiState.activeWorkspaceId) {
+        isInviteOpen = false
+        acceptCode = ""
+    }
 
     BackHandler(onBack = onNavigateUp)
 

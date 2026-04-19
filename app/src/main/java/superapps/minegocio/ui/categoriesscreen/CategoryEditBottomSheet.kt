@@ -89,7 +89,12 @@ fun CategoryEditBottomSheet(
 
             OutlinedTextField(
                 value = categoryDescription,
-                onValueChange = { categoryDescription = it },
+                onValueChange = {
+                    categoryDescription = it
+                    if (errorMessage != null) {
+                        onClearError()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.categories_field_description)) },
                 placeholder = {

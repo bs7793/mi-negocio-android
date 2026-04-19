@@ -66,8 +66,26 @@ fun CategoriesScreen(
         uiState.categories.find { it.id == id }
     }
     val editCategoryContentDescription = stringResource(R.string.cd_edit_category)
+    val resetCreateState = {
+        isCreateSheetOpen = false
+        submitAttempted = false
+        categoryName = ""
+        categoryDescription = ""
+        isNameTouched = false
+        viewModel.clearCreateError()
+    }
+    val resetEditState = {
+        editingCategoryId = null
+        editSubmitAttempted = false
+        viewModel.clearUpdateError()
+    }
 
     BackHandler(onBack = onNavigateUp)
+
+    LaunchedEffect(uiState.activeWorkspaceId) {
+        resetCreateState()
+        resetEditState()
+    }
 
     LaunchedEffect(editingCategoryId, uiState.categories) {
         val id = editingCategoryId ?: return@LaunchedEffect
@@ -218,12 +236,7 @@ fun CategoriesScreen(
         if (isCreateSheetOpen) {
             ModalBottomSheet(
                 onDismissRequest = {
-                    isCreateSheetOpen = false
-                    submitAttempted = false
-                    categoryName = ""
-                    categoryDescription = ""
-                    isNameTouched = false
-                    viewModel.clearCreateError()
+                    resetCreateState()
                 },
             ) {
                 Column(
@@ -321,9 +334,7 @@ fun CategoriesScreen(
             CategoryEditBottomSheet(
                 category = category,
                 onDismissRequest = {
-                    editingCategoryId = null
-                    editSubmitAttempted = false
-                    viewModel.clearUpdateError()
+                    resetEditState()
                 },
                 onSave = { name, description ->
                     editSubmitAttempted = true

@@ -22,12 +22,10 @@ class DailyCashClosureRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    private var cachedWorkspaceId: String? = null
-    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchWarehouses(): List<DailyCashClosureWarehouse> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint =
             "${SupabaseProvider.restUrl}/warehouses" +
                 "?select=id,workspace_id,name,location,aisle,shelf,level,position" +
@@ -45,6 +43,7 @@ class DailyCashClosureRepository(
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): DailyCashClosureSummary = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_sales_daily_summary"
         val dailyRange = calculateLocalDayRange(zoneId)
         val body = json.encodeToString(
@@ -52,6 +51,7 @@ class DailyCashClosureRepository(
                 warehouseId = warehouseId,
                 startAt = dailyRange.startAt,
                 endAt = dailyRange.endAt,
+                workspaceId = workspaceId,
             ),
         )
         val result = post(endpoint, body)
@@ -77,27 +77,10 @@ class DailyCashClosureRepository(
         return execute(endpoint, "POST", refreshed, body)
     }
 
-    private suspend fun primaryWorkspaceId(): String {
-        val uid = authSessionManager.currentUserIdOrNull()
-        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
-        if (!selectedWorkspaceId.isNullOrBlank()) {
-            cachedWorkspaceId = selectedWorkspaceId
-            cachedWorkspaceForUserId = uid
-            return selectedWorkspaceId
-        }
-        if (cachedWorkspaceId != null && uid != null && cachedWorkspaceForUserId == uid) {
-            return cachedWorkspaceId!!
-        }
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
-        val result = post(endpoint, "{}")
-        if (result.code !in 200..299) {
-            throw IOException(parseSupabaseError(result.body, "Failed to resolve workspace (${result.code})"))
-        }
-        val id = result.body.trim().removePrefix("\"").removeSuffix("\"")
-        if (id.isBlank()) throw IOException("Workspace id response was empty")
-        cachedWorkspaceId = id
-        cachedWorkspaceForUserId = uid
-        return id
+    private fun requireSelectedWorkspaceId(): String {
+        return WorkspaceSelectionStore.selectedWorkspaceId
+            ?.takeIf { it.isNotBlank() }
+            ?: throw IOException("Selecciona un workspace antes de continuar.")
     }
 
     private fun execute(
@@ -172,6 +155,8 @@ private data class GetSalesDailySummaryPayload(
     val startAt: String? = null,
     @SerialName("p_end_at")
     val endAt: String? = null,
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
 )
 
 private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8.toString())

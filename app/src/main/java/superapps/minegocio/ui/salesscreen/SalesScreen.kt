@@ -87,6 +87,12 @@ fun SalesScreen(
             showReferenceField = false
         }
     }
+    LaunchedEffect(uiState.activeWorkspaceId) {
+        warehouseMenuOpen = false
+        showPaymentSheet = false
+        showCustomerSheet = false
+        showReferenceField = false
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),

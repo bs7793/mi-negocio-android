@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import superapps.minegocio.ui.SalesSummaryInvalidationBus
+import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.time.Clock
 import java.time.YearMonth
 
@@ -51,6 +53,7 @@ class DashboardViewModel(
     private var refreshJob: Job? = null
     private var saleDetailJob: Job? = null
     private var receiptJob: Job? = null
+    private var activeWorkspaceId: String? = WorkspaceSelectionStore.selectedWorkspaceId
     private var latestRefreshRequestId: Long = 0
     private var refreshingWarehouseFilter: Long? = null
 
@@ -59,6 +62,14 @@ class DashboardViewModel(
         viewModelScope.launch {
             SalesSummaryInvalidationBus.salesSummaryInvalidations.collectLatest {
                 requestSummaryRefresh(force = false)
+            }
+        }
+        viewModelScope.launch {
+            WorkspaceScopeInvalidationBus.workspaceChanges.collectLatest { workspaceId ->
+                if (workspaceId == activeWorkspaceId) return@collectLatest
+                activeWorkspaceId = workspaceId
+                closeSaleDetail()
+                loadInitial()
             }
         }
     }

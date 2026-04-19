@@ -14,9 +14,9 @@ import java.net.URL
 import java.nio.charset.StandardCharsets
 
 @Serializable
-private data class SetActiveWorkspacePayload(
-    @SerialName("p_workspace_id")
-    val workspaceId: String,
+private data class ListMyWorkspacesPayload(
+    @SerialName("p_selected_workspace_id")
+    val selectedWorkspaceId: String? = null,
 )
 
 class WorkspaceSessionRepository(
@@ -24,10 +24,13 @@ class WorkspaceSessionRepository(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun listMyWorkspaces(): List<WorkspaceSummary> = withContext(Dispatchers.IO) {
+    suspend fun listMyWorkspaces(selectedWorkspaceId: String?): List<WorkspaceSummary> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/list_my_workspaces"
-        val result = post(endpoint, "{}")
+        val body = json.encodeToString(
+            ListMyWorkspacesPayload(selectedWorkspaceId = selectedWorkspaceId),
+        )
+        val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to list workspaces (${result.code})"))
         }
@@ -35,14 +38,13 @@ class WorkspaceSessionRepository(
     }
 
     suspend fun setActiveWorkspace(workspaceId: String): SetActiveWorkspaceResponse = withContext(Dispatchers.IO) {
-        SupabaseProvider.assertConfigured()
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/set_my_active_workspace_id"
-        val body = json.encodeToString(SetActiveWorkspacePayload(workspaceId = workspaceId))
-        val result = post(endpoint, body)
-        if (result.code !in 200..299) {
-            throw IOException(parseSupabaseError(result.body, "Failed to set active workspace (${result.code})"))
+        if (workspaceId.isBlank()) {
+            throw IOException("Selecciona un workspace antes de continuar.")
         }
-        json.decodeFromString(result.body)
+        SetActiveWorkspaceResponse(
+            success = true,
+            activeWorkspaceId = workspaceId,
+        )
     }
 
     private suspend fun post(endpoint: String, body: String): HttpResult {

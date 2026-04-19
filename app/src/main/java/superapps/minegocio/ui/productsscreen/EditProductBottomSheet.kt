@@ -227,6 +227,7 @@ fun EditProductBottomSheet(
                         onClick = {
                             selectedCategoryId = null
                             isCategoryMenuOpen = false
+                            if (errorMessage != null) onClearError()
                         },
                     )
                     categories.forEach { category ->
@@ -235,6 +236,7 @@ fun EditProductBottomSheet(
                             onClick = {
                                 selectedCategoryId = category.id
                                 isCategoryMenuOpen = false
+                                if (errorMessage != null) onClearError()
                             },
                         )
                     }
@@ -313,6 +315,7 @@ fun EditProductBottomSheet(
                             selectedImageUri = null
                             selectedImageUpload = null
                             currentImageUrl = null
+                            if (errorMessage != null) onClearError()
                         },
                         enabled = !isSubmitting && !isPreparingImage,
                     ) {

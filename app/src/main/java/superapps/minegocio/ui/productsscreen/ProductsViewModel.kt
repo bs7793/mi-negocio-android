@@ -3,13 +3,16 @@ package superapps.minegocio.ui.productsscreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
 import superapps.minegocio.ui.categoriesscreen.Category
 import superapps.minegocio.ui.warehousesscreen.Warehouse
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 
 data class ProductsUiState(
     val isLoading: Boolean = true,
@@ -27,6 +30,7 @@ data class ProductsUiState(
     val isUpdatingProduct: Boolean = false,
     val updateErrorMessage: String? = null,
     val updateWarningMessage: String? = null,
+    val activeWorkspaceId: String? = null,
 )
 
 class ProductsViewModel(
@@ -34,9 +38,33 @@ class ProductsViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProductsUiState())
     val uiState: StateFlow<ProductsUiState> = _uiState.asStateFlow()
+    private var activeWorkspaceId: String? = WorkspaceSelectionStore.selectedWorkspaceId
 
     init {
         loadInitial()
+        observeWorkspaceChanges()
+    }
+
+    private fun observeWorkspaceChanges() {
+        viewModelScope.launch {
+            WorkspaceScopeInvalidationBus.workspaceChanges.collectLatest { workspaceId ->
+                if (workspaceId == activeWorkspaceId) return@collectLatest
+                activeWorkspaceId = workspaceId
+                _uiState.update {
+                    it.copy(
+                        searchQuery = "",
+                        selectedCategoryId = null,
+                        selectedWarehouseId = null,
+                        errorMessage = null,
+                        createErrorMessage = null,
+                        updateErrorMessage = null,
+                        updateWarningMessage = null,
+                        activeWorkspaceId = workspaceId,
+                    )
+                }
+                loadInitial()
+            }
+        }
     }
 
     fun loadInitial() {
@@ -66,6 +94,7 @@ class ProductsViewModel(
                         products = products.items,
                         total = products.total,
                         errorMessage = null,
+                        activeWorkspaceId = activeWorkspaceId,
                     )
                 }
             } catch (e: Exception) {

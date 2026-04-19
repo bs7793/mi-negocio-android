@@ -257,7 +257,10 @@ Deno.serve(async (request: Request) => {
 
   const { data: detailData, error: detailError } = await userClient.rpc(
     "get_dashboard_sale_detail",
-    { p_sale_id: saleId },
+    {
+      p_sale_id: saleId,
+      p_workspace_id: workspaceId,
+    },
   );
   if (detailError || !detailData || typeof detailData !== "object") {
     return response(500, { message: "Failed to fetch sale detail" });

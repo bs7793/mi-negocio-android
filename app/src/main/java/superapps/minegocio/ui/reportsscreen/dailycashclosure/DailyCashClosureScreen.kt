@@ -129,7 +129,7 @@ fun DailyCashClosureScreen(
                         CircularProgressIndicator()
                     }
                 }
-            } else {
+            } else if (uiState.errorMessage == null) {
                 item {
                     TotalsCard(
                         salesCount = uiState.summary.salesCount,

@@ -21,8 +21,6 @@ class ProductsRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    private var cachedWorkspaceId: String? = null
-    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchProducts(
         limit: Int = 20,
@@ -32,6 +30,7 @@ class ProductsRepository(
         warehouseId: Long? = null,
     ): ProductsListResponse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_products_list"
         val payload = GetProductsListRpcPayload(
             limit = limit,
@@ -39,6 +38,7 @@ class ProductsRepository(
             search = search?.trim().takeUnless { it.isNullOrBlank() },
             categoryId = categoryId,
             warehouseId = warehouseId,
+            workspaceId = workspaceId,
         )
         val body = json.encodeToString(payload)
         val result = post(endpoint, body)
@@ -50,7 +50,7 @@ class ProductsRepository(
 
     suspend fun fetchCategories(): List<Category> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint =
             "${SupabaseProvider.restUrl}/categories" +
                 "?select=id,workspace_id,name,description" +
@@ -65,7 +65,7 @@ class ProductsRepository(
 
     suspend fun fetchWarehouses(): List<Warehouse> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val workspaceId = primaryWorkspaceId()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint =
             "${SupabaseProvider.restUrl}/warehouses" +
                 "?select=id,workspace_id,name,location,aisle,shelf,level,position" +
@@ -80,8 +80,9 @@ class ProductsRepository(
 
     suspend fun fetchProductOptionsCatalog(): ProductOptionsCatalogResponse = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/get_product_options_catalog"
-        val body = "{}"
+        val body = json.encodeToString(GetProductOptionsCatalogPayload(workspaceId = workspaceId))
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to fetch options catalog (${result.code})"))
@@ -177,29 +178,6 @@ class ProductsRepository(
         if (first.code != 401) return first
         val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
         return execute(endpoint, "GET", refreshed, null)
-    }
-
-    private suspend fun primaryWorkspaceId(): String {
-        val uid = authSessionManager.currentUserIdOrNull()
-        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
-        if (!selectedWorkspaceId.isNullOrBlank()) {
-            cachedWorkspaceId = selectedWorkspaceId
-            cachedWorkspaceForUserId = uid
-            return selectedWorkspaceId
-        }
-        if (cachedWorkspaceId != null && uid != null && cachedWorkspaceForUserId == uid) {
-            return cachedWorkspaceId!!
-        }
-        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
-        val result = post(endpoint, "{}")
-        if (result.code !in 200..299) {
-            throw IOException(parseSupabaseError(result.body, "Failed to resolve workspace (${result.code})"))
-        }
-        val id = result.body.trim().removePrefix("\"").removeSuffix("\"")
-        if (id.isBlank()) throw IOException("Workspace id response was empty")
-        cachedWorkspaceId = id
-        cachedWorkspaceForUserId = uid
-        return id
     }
 
     private fun requireSelectedWorkspaceId(): String {
@@ -357,6 +335,14 @@ private data class GetProductsListRpcPayload(
     val categoryId: Long? = null,
     @kotlinx.serialization.SerialName("p_warehouse_id")
     val warehouseId: Long? = null,
+    @kotlinx.serialization.SerialName("p_workspace_id")
+    val workspaceId: String,
+)
+
+@Serializable
+private data class GetProductOptionsCatalogPayload(
+    @kotlinx.serialization.SerialName("p_workspace_id")
+    val workspaceId: String,
 )
 
 @Serializable

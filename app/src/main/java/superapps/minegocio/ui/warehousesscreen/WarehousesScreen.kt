@@ -73,8 +73,30 @@ fun WarehousesScreen(
     }
     val editWarehouseCd = stringResource(R.string.cd_edit_warehouse)
     val createScroll = rememberScrollState()
+    val resetCreateState = {
+        isCreateSheetOpen = false
+        submitAttempted = false
+        warehouseName = ""
+        warehouseLocation = ""
+        warehouseAisle = ""
+        warehouseShelf = ""
+        warehouseLevel = ""
+        warehousePosition = ""
+        isNameTouched = false
+        viewModel.clearCreateError()
+    }
+    val resetEditState = {
+        editingWarehouseId = null
+        editSubmitAttempted = false
+        viewModel.clearUpdateError()
+    }
 
     BackHandler(onBack = onNavigateUp)
+
+    LaunchedEffect(uiState.activeWorkspaceId) {
+        resetCreateState()
+        resetEditState()
+    }
 
     LaunchedEffect(editingWarehouseId, uiState.warehouses) {
         val id = editingWarehouseId ?: return@LaunchedEffect
@@ -242,16 +264,7 @@ fun WarehousesScreen(
         if (isCreateSheetOpen) {
             ModalBottomSheet(
                 onDismissRequest = {
-                    isCreateSheetOpen = false
-                    submitAttempted = false
-                    warehouseName = ""
-                    warehouseLocation = ""
-                    warehouseAisle = ""
-                    warehouseShelf = ""
-                    warehouseLevel = ""
-                    warehousePosition = ""
-                    isNameTouched = false
-                    viewModel.clearCreateError()
+                    resetCreateState()
                 },
             ) {
                 Column(
@@ -386,9 +399,7 @@ fun WarehousesScreen(
             WarehouseEditBottomSheet(
                 warehouse = warehouse,
                 onDismissRequest = {
-                    editingWarehouseId = null
-                    editSubmitAttempted = false
-                    viewModel.clearUpdateError()
+                    resetEditState()
                 },
                 onSave = { name, location, aisle, shelf, level, position ->
                     editSubmitAttempted = true

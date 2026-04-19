@@ -52,6 +52,8 @@ fun ProfileScreen(
     onSignInWithGoogle: () -> Unit,
     onSignOut: () -> Unit,
     onDismissAuthError: () -> Unit,
+    sessionErrorMessage: String? = null,
+    onDismissSessionError: () -> Unit = {},
     onOpenCategories: () -> Unit,
     onOpenProducts: () -> Unit,
     onOpenSales: () -> Unit,
@@ -166,6 +168,16 @@ fun ProfileScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
             TextButton(onClick = onDismissAuthError) {
+                Text(text = stringResource(R.string.auth_action_dismiss_error))
+            }
+        }
+        if (!sessionErrorMessage.isNullOrBlank()) {
+            Text(
+                text = sessionErrorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onClick = onDismissSessionError) {
                 Text(text = stringResource(R.string.auth_action_dismiss_error))
             }
         }

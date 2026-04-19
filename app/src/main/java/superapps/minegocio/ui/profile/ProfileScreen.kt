@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.material3.HorizontalDivider
@@ -49,6 +50,7 @@ fun ProfileScreen(
     onOpenProducts: () -> Unit,
     onOpenSales: () -> Unit,
     onOpenWarehouses: () -> Unit,
+    onOpenEmployees: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -157,6 +159,12 @@ fun ProfileScreen(
                     icon = Icons.Filled.Warehouse,
                     label = stringResource(R.string.profile_menu_warehouses),
                     onClick = onOpenWarehouses,
+                    showDividerBelow = true,
+                )
+                ProfileManagementRow(
+                    icon = Icons.Filled.People,
+                    label = stringResource(R.string.profile_menu_employees),
+                    onClick = onOpenEmployees,
                     showDividerBelow = false,
                 )
             }

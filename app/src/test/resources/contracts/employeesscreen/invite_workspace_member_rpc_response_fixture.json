@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "message": "Employee invited successfully",
+  "member": {
+    "user_id": "84b33bd4-6f5d-4c7a-a9de-151ce6fabf90",
+    "email": "member@example.com",
+    "full_name": "Team Member",
+    "role": "member",
+    "status": "active"
+  }
+}

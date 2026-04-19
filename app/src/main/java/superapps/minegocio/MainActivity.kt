@@ -45,6 +45,7 @@ import superapps.minegocio.navigation.ProfileNavRoutes
 import superapps.minegocio.ui.auth.AuthViewModel
 import superapps.minegocio.ui.categoriesscreen.CategoriesScreen
 import superapps.minegocio.ui.dashboardscreen.DashboardScreen
+import superapps.minegocio.ui.employeesscreen.EmployeesScreen
 import superapps.minegocio.ui.profile.ProfileScreen
 import superapps.minegocio.ui.productsscreen.ProductsScreen
 import superapps.minegocio.ui.reportsscreen.ReportsScreen
@@ -191,6 +192,9 @@ fun MyApplicationApp() {
                             onOpenWarehouses = {
                                 navController.navigate(ProfileNavRoutes.WAREHOUSES)
                             },
+                            onOpenEmployees = {
+                                navController.navigate(ProfileNavRoutes.EMPLOYEES)
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -211,6 +215,11 @@ fun MyApplicationApp() {
                     }
                     composable(ProfileNavRoutes.SALES) {
                         SalesScreen(
+                            onNavigateUp = { navController.popBackStack() },
+                        )
+                    }
+                    composable(ProfileNavRoutes.EMPLOYEES) {
+                        EmployeesScreen(
                             onNavigateUp = { navController.popBackStack() },
                         )
                     }

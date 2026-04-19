@@ -1,0 +1,16 @@
+[
+  {
+    "user_id": "d4d6ff8e-df4d-4be1-8c9f-e32ffeb5d88c",
+    "email": "owner@example.com",
+    "full_name": "Owner User",
+    "role": "owner",
+    "status": "active"
+  },
+  {
+    "user_id": "84b33bd4-6f5d-4c7a-a9de-151ce6fabf90",
+    "email": "member@example.com",
+    "full_name": "Team Member",
+    "role": "member",
+    "status": "invited"
+  }
+]

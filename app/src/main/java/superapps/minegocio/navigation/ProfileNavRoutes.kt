@@ -6,4 +6,5 @@ object ProfileNavRoutes {
     const val WAREHOUSES = "warehouses"
     const val PRODUCTS = "products"
     const val SALES = "sales"
+    const val EMPLOYEES = "employees"
 }

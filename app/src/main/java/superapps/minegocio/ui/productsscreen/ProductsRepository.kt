@@ -2,6 +2,7 @@ package superapps.minegocio.ui.productsscreen
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -105,7 +106,12 @@ class ProductsRepository(
             workspaceId = payloadWithImage.workspaceId ?: workspaceId,
         )
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_product_with_variants"
-        val body = json.encodeToString(CreateProductRpcPayload(payload = workspaceScopedPayload))
+        val body = json.encodeToString(
+            CreateProductRpcPayload(
+                workspaceId = workspaceId,
+                payload = workspaceScopedPayload,
+            ),
+        )
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to create product (${result.code})"))
@@ -129,7 +135,12 @@ class ProductsRepository(
             workspaceId = payloadWithImage.workspaceId ?: workspaceId,
         )
         val endpoint = "${SupabaseProvider.restUrl}/rpc/update_product_basic"
-        val body = json.encodeToString(UpdateProductBasicRpcPayload(payload = workspaceScopedPayload))
+        val body = json.encodeToString(
+            UpdateProductBasicRpcPayload(
+                workspaceId = workspaceId,
+                payload = workspaceScopedPayload,
+            ),
+        )
         val result = post(endpoint, body)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to update product (${result.code})"))
@@ -347,12 +358,16 @@ private data class GetProductOptionsCatalogPayload(
 
 @Serializable
 private data class CreateProductRpcPayload(
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
     @kotlinx.serialization.SerialName("p_payload")
     val payload: CreateProductPayload,
 )
 
 @Serializable
 private data class UpdateProductBasicRpcPayload(
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
     @kotlinx.serialization.SerialName("p_payload")
     val payload: UpdateProductBasicPayload,
 )

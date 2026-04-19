@@ -69,6 +69,7 @@ class SalesRepository(
         val workspaceId = requireSelectedWorkspaceId()
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_sale_with_lines_and_payments"
         val payload = CreateSaleRpcPayload(
+            workspaceId = workspaceId,
             payload = CreateSalePayload(
                 workspaceId = workspaceId,
                 warehouseId = warehouseId,
@@ -199,6 +200,8 @@ private data class GetSellableVariantsPayload(
 
 @Serializable
 private data class CreateSaleRpcPayload(
+    @SerialName("p_workspace_id")
+    val workspaceId: String,
     @SerialName("p_payload")
     val payload: CreateSalePayload,
 )

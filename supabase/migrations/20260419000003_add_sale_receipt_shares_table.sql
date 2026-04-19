@@ -23,7 +23,7 @@ DROP POLICY IF EXISTS sale_receipt_shares_select_by_workspace ON public.sale_rec
 CREATE POLICY sale_receipt_shares_select_by_workspace
   ON public.sale_receipt_shares
   FOR SELECT
-  USING (public.is_workspace_member(workspace_id));
+  USING (app.is_active_workspace_member(workspace_id));
 
 DROP POLICY IF EXISTS sale_receipt_shares_insert_by_workspace ON public.sale_receipt_shares;
 CREATE POLICY sale_receipt_shares_insert_by_workspace
@@ -31,12 +31,12 @@ CREATE POLICY sale_receipt_shares_insert_by_workspace
   FOR INSERT
   WITH CHECK (
     created_by = auth.uid()
-    AND public.is_workspace_member(workspace_id)
+    AND app.is_active_workspace_member(workspace_id)
   );
 
 DROP POLICY IF EXISTS sale_receipt_shares_update_by_workspace ON public.sale_receipt_shares;
 CREATE POLICY sale_receipt_shares_update_by_workspace
   ON public.sale_receipt_shares
   FOR UPDATE
-  USING (public.is_workspace_member(workspace_id))
-  WITH CHECK (public.is_workspace_member(workspace_id));
+  USING (app.is_active_workspace_member(workspace_id))
+  WITH CHECK (app.is_active_workspace_member(workspace_id));

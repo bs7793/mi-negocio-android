@@ -9,8 +9,10 @@ import kotlinx.serialization.json.Json
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
 import superapps.minegocio.ui.warehousesscreen.Warehouse
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
@@ -18,10 +20,17 @@ class SalesRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+    private var cachedWorkspaceId: String? = null
+    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchWarehouses(): List<Warehouse> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val endpoint = "${SupabaseProvider.restUrl}/warehouses?select=id,workspace_id,name,location,aisle,shelf,level,position&order=name.asc"
+        val workspaceId = primaryWorkspaceId()
+        val endpoint =
+            "${SupabaseProvider.restUrl}/warehouses" +
+                "?select=id,workspace_id,name,location,aisle,shelf,level,position" +
+                "&workspace_id=eq.${workspaceId.urlEncode()}" +
+                "&order=name.asc"
         val result = get(endpoint)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to fetch warehouses (${result.code})"))
@@ -60,6 +69,7 @@ class SalesRepository(
         val endpoint = "${SupabaseProvider.restUrl}/rpc/create_sale_with_lines_and_payments"
         val payload = CreateSaleRpcPayload(
             payload = CreateSalePayload(
+                workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
                 warehouseId = warehouseId,
                 customerName = customerName?.trim().takeUnless { it.isNullOrBlank() },
                 notes = notes?.trim().takeUnless { it.isNullOrBlank() },
@@ -89,6 +99,29 @@ class SalesRepository(
         if (first.code != 401) return first
         val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
         return execute(endpoint, "POST", refreshed, body)
+    }
+
+    private suspend fun primaryWorkspaceId(): String {
+        val uid = authSessionManager.currentUserIdOrNull()
+        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
+        if (!selectedWorkspaceId.isNullOrBlank()) {
+            cachedWorkspaceId = selectedWorkspaceId
+            cachedWorkspaceForUserId = uid
+            return selectedWorkspaceId
+        }
+        if (cachedWorkspaceId != null && uid != null && cachedWorkspaceForUserId == uid) {
+            return cachedWorkspaceId!!
+        }
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
+        val result = post(endpoint, "{}")
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to resolve workspace (${result.code})"))
+        }
+        val id = result.body.trim().removePrefix("\"").removeSuffix("\"")
+        if (id.isBlank()) throw IOException("Workspace id response was empty")
+        cachedWorkspaceId = id
+        cachedWorkspaceForUserId = uid
+        return id
     }
 
     private fun execute(
@@ -160,7 +193,12 @@ private fun readBody(connection: HttpURLConnection, isSuccess: Boolean): String 
 private fun parseSupabaseError(rawBody: String, fallback: String): String {
     if (rawBody.isBlank()) return fallback
     val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
-    return message ?: fallback
+    return when (message) {
+        "workspace_required" -> "Selecciona un workspace antes de continuar."
+        "workspace_forbidden" -> "No tienes permisos en el workspace seleccionado."
+        "cross_workspace_reference" -> "Los datos seleccionados pertenecen a otro workspace."
+        else -> message ?: fallback
+    }
 }
 
 @Serializable
@@ -181,6 +219,8 @@ private data class CreateSaleRpcPayload(
 
 @Serializable
 private data class CreateSalePayload(
+    @SerialName("workspace_id")
+    val workspaceId: String? = null,
     @SerialName("warehouse_id")
     val warehouseId: Long,
     @SerialName("customer_name")
@@ -189,3 +229,5 @@ private data class CreateSalePayload(
     val lines: List<SaleCreateLineInput>,
     val payments: List<SaleCreatePaymentInput>,
 )
+
+private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8.toString())

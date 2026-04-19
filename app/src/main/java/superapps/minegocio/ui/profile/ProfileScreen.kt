@@ -25,10 +25,15 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +44,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import superapps.minegocio.R
 import superapps.minegocio.ui.auth.AuthUiState
+import superapps.minegocio.ui.workspacesession.WorkspaceSummary
 
 @Composable
 fun ProfileScreen(
@@ -51,8 +57,16 @@ fun ProfileScreen(
     onOpenSales: () -> Unit,
     onOpenWarehouses: () -> Unit,
     onOpenEmployees: () -> Unit,
+    inviteCodeError: String?,
+    isSubmittingInviteCode: Boolean,
+    workspaceName: String?,
+    workspaces: List<WorkspaceSummary>,
+    onSubmitInviteCode: (String) -> Unit,
+    onSelectWorkspace: (String) -> Unit,
+    onClearInviteCodeError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var inviteCode by rememberSaveable { mutableStateOf("") }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -81,6 +95,39 @@ fun ProfileScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 1.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.workspace_active_label, workspaceName ?: "-"),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                workspaces.forEach { workspace ->
+                    OutlinedButton(
+                        onClick = { onSelectWorkspace(workspace.workspaceId) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = if (workspace.isActive) {
+                                "${workspace.workspaceName} (${stringResource(R.string.workspace_active_badge)})"
+                            } else {
+                                workspace.workspaceName
+                            },
+                        )
+                    }
+                }
+            }
+        }
 
         if (authUiState.isLoading) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -120,6 +167,56 @@ fun ProfileScreen(
             )
             TextButton(onClick = onDismissAuthError) {
                 Text(text = stringResource(R.string.auth_action_dismiss_error))
+            }
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 1.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.employees_accept_code_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                OutlinedTextField(
+                    value = inviteCode,
+                    onValueChange = {
+                        inviteCode = it
+                        if (!inviteCodeError.isNullOrBlank()) onClearInviteCodeError()
+                    },
+                    label = { Text(stringResource(R.string.employees_accept_code_label)) },
+                    placeholder = { Text(stringResource(R.string.employees_accept_code_placeholder)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                if (!inviteCodeError.isNullOrBlank()) {
+                    Text(
+                        text = inviteCodeError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                OutlinedButton(
+                    onClick = { onSubmitInviteCode(inviteCode.trim()) },
+                    enabled = !isSubmittingInviteCode && inviteCode.trim().isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (isSubmittingInviteCode) {
+                            stringResource(R.string.employees_accept_code_action_loading)
+                        } else {
+                            stringResource(R.string.employees_accept_code_action)
+                        },
+                    )
+                }
             }
         }
 

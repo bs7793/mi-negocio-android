@@ -53,4 +53,25 @@ class EmployeesContractsTest {
         assertTrue(mutation.success)
         assertNull(mutation.member)
     }
+
+    @Test
+    fun `decode create workspace invite code fixture`() {
+        val raw = ContractFixtureLoader.readRaw(
+            "contracts/employeesscreen/create_workspace_invite_code_rpc_response_fixture.json",
+        )
+        val result = json.decodeFromString<InviteCodeResult>(raw)
+        assertTrue(result.success)
+        assertEquals("member", result.role)
+        assertEquals("A1B2C3D4E5", result.inviteCode)
+    }
+
+    @Test
+    fun `decode list workspace invite codes fixture`() {
+        val raw = ContractFixtureLoader.readRaw(
+            "contracts/employeesscreen/list_workspace_invite_codes_rpc_response_fixture.json",
+        )
+        val inviteCodes = json.decodeFromString(ListSerializer(WorkspaceInviteCode.serializer()), raw)
+        assertEquals(1, inviteCodes.size)
+        assertEquals("pending", inviteCodes.first().status)
+    }
 }

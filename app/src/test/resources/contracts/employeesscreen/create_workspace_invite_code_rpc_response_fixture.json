@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "message": "Invite code created successfully",
+  "invite_code": "A1B2C3D4E5",
+  "role": "member",
+  "expires_at": "2026-04-22T20:10:00Z"
+}

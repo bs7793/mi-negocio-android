@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -114,6 +115,12 @@ class WarehousesRepository(
 
     private suspend fun primaryWorkspaceId(): String {
         val uid = authSessionManager.currentUserIdOrNull()
+        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
+        if (!selectedWorkspaceId.isNullOrBlank()) {
+            cachedWorkspaceId = selectedWorkspaceId
+            cachedWorkspaceForUserId = uid
+            return selectedWorkspaceId
+        }
         if (
             cachedWorkspaceId != null &&
             uid != null &&
@@ -338,7 +345,12 @@ private fun readBody(
 private fun parseSupabaseError(rawBody: String, fallback: String): String {
     if (rawBody.isBlank()) return fallback
     val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
-    return message ?: fallback
+    return when (message) {
+        "workspace_required" -> "Selecciona un workspace antes de continuar."
+        "workspace_forbidden" -> "No tienes permisos en el workspace seleccionado."
+        "cross_workspace_reference" -> "Los datos seleccionados pertenecen a otro workspace."
+        else -> message ?: fallback
+    }
 }
 
 private fun reportWorkspaceResolutionToCrashlytics(throwable: Throwable) {

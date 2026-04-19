@@ -20,3 +20,28 @@ data class EmployeeMutationResult(
     val message: String? = null,
     val member: Employee? = null,
 )
+
+@Serializable
+data class InviteCodeResult(
+    val success: Boolean,
+    val message: String? = null,
+    @SerialName("invite_code")
+    val inviteCode: String? = null,
+    val role: String? = null,
+    @SerialName("expires_at")
+    val expiresAt: String? = null,
+)
+
+@Serializable
+data class WorkspaceInviteCode(
+    @SerialName("invite_id")
+    val inviteId: String,
+    @SerialName("invite_code")
+    val inviteCode: String,
+    val role: String,
+    val status: String,
+    @SerialName("expires_at")
+    val expiresAt: String,
+    @SerialName("created_at")
+    val createdAt: String,
+)

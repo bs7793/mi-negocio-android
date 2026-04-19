@@ -51,6 +51,15 @@ class AuthViewModel(
         }
     }
 
+    fun acceptInviteCode(inviteCode: String, onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            runAuthOperation(defaultErrorMessage = "Invite code acceptance failed") {
+                sessionManager.acceptInviteCode(inviteCode)
+                onSuccess?.invoke()
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }

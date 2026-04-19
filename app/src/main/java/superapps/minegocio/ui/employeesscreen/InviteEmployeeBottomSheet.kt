@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,21 +34,18 @@ import superapps.minegocio.R
 fun InviteEmployeeBottomSheet(
     isInviting: Boolean,
     errorMessage: String?,
+    latestInviteCode: InviteCodeResult?,
     onDismissRequest: () -> Unit,
-    onInvite: (email: String, role: String) -> Unit,
+    onCreateInviteCode: (role: String) -> Unit,
     onClearError: () -> Unit,
+    onClearLatestCode: () -> Unit,
 ) {
     val scroll = rememberScrollState()
-    var email by rememberSaveable { mutableStateOf("") }
     var role by rememberSaveable { mutableStateOf("member") }
     var submitAttempted by rememberSaveable { mutableStateOf(false) }
-    val normalizedEmail = email.trim()
-    val isEmailValid = normalizedEmail.contains("@") && normalizedEmail.contains(".")
-    val showEmailError = submitAttempted && !isEmailValid
 
     LaunchedEffect(isInviting, errorMessage) {
         if (submitAttempted && !isInviting && errorMessage == null) {
-            onDismissRequest()
             submitAttempted = false
         }
     }
@@ -70,26 +68,6 @@ fun InviteEmployeeBottomSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    if (errorMessage != null) onClearError()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.employees_field_email)) },
-                placeholder = { Text(stringResource(R.string.employees_field_email_placeholder)) },
-                singleLine = true,
-                isError = showEmailError,
-            )
-            if (showEmailError) {
-                Text(
-                    text = stringResource(R.string.employees_field_email_invalid),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
             Text(
                 text = stringResource(R.string.employees_field_role),
                 style = MaterialTheme.typography.labelLarge,
@@ -100,11 +78,11 @@ fun InviteEmployeeBottomSheet(
             ) {
                 AssistChip(
                     onClick = { role = "member" },
-                    label = { Text("Member") },
+                    label = { Text(stringResource(R.string.employees_role_member)) },
                 )
                 AssistChip(
                     onClick = { role = "admin" },
-                    label = { Text("Admin") },
+                    label = { Text(stringResource(R.string.employees_role_admin)) },
                 )
             }
             Text(
@@ -124,9 +102,9 @@ fun InviteEmployeeBottomSheet(
             Button(
                 onClick = {
                     submitAttempted = true
-                    onInvite(normalizedEmail, role)
+                    onCreateInviteCode(role)
                 },
-                enabled = !isInviting && isEmailValid,
+                enabled = !isInviting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
@@ -147,5 +125,35 @@ fun InviteEmployeeBottomSheet(
                 }
             }
         }
+    }
+
+    if (latestInviteCode?.success == true && !latestInviteCode.inviteCode.isNullOrBlank()) {
+        AlertDialog(
+            onDismissRequest = onClearLatestCode,
+            confirmButton = {
+                Button(onClick = onClearLatestCode) {
+                    Text(stringResource(R.string.employees_action_done))
+                }
+            },
+            title = { Text(stringResource(R.string.employees_generated_code_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = latestInviteCode.inviteCode,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.employees_generated_code_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.employees_generated_code_expires,
+                            latestInviteCode.expiresAt ?: "",
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+        )
     }
 }

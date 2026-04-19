@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.buildJsonObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.charset.StandardCharsets
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
 
 class AuthSessionManager(
@@ -55,6 +59,23 @@ class AuthSessionManager(
         }
     }
 
+    suspend fun acceptInviteCode(inviteCode: String) {
+        require(inviteCode.isNotBlank()) { "Invite code is required" }
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/accept_workspace_invite"
+        val payload = """{"invite_token":"${inviteCode.trim()}"}"""
+        val token = getSupabaseAccessToken(forceRefresh = false)
+        val first = executePost(endpoint, payload, token)
+        val result = if (first.code == 401) {
+            val refreshed = getSupabaseAccessToken(forceRefresh = true)
+            executePost(endpoint, payload, refreshed)
+        } else {
+            first
+        }
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to accept invite code (${result.code})"))
+        }
+    }
+
     suspend fun getSupabaseAccessToken(forceRefresh: Boolean = false): String {
         return getSupabaseAccessTokenOrNull(forceRefresh = forceRefresh)
             ?: throw IllegalStateException("No active Supabase session")
@@ -90,6 +111,46 @@ class AuthSessionManager(
             isAnonymous = user.isAnonymousSupabaseUser(),
         )
     }
+}
+
+private data class HttpResult(
+    val code: Int,
+    val body: String,
+)
+
+private fun executePost(endpoint: String, payload: String, accessToken: String): HttpResult {
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 10000
+        readTimeout = 15000
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("Accept", "application/json")
+        setRequestProperty("apikey", SupabaseProvider.anonKey)
+        setRequestProperty("Authorization", "Bearer $accessToken")
+    }
+    try {
+        connection.outputStream.use { output ->
+            output.write(payload.toByteArray(StandardCharsets.UTF_8))
+        }
+        val code = connection.responseCode
+        val body = readBody(connection, code in 200..299)
+        return HttpResult(code, body)
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun readBody(connection: HttpURLConnection, isSuccess: Boolean): String {
+    val stream = if (isSuccess) connection.inputStream else connection.errorStream
+    if (stream == null) return ""
+    return stream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+}
+
+private fun parseSupabaseError(rawBody: String, fallback: String): String {
+    if (rawBody.isBlank()) return fallback
+    val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
+    return message ?: fallback
 }
 
 private fun UserInfo.isAnonymousSupabaseUser(): Boolean {

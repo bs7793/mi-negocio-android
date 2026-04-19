@@ -8,16 +8,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
-
-@Serializable
-private data class InviteEmployeePayload(
-    val email: String,
-    val role: String,
-)
 
 @Serializable
 private data class UpdateEmployeePayload(
@@ -25,6 +20,36 @@ private data class UpdateEmployeePayload(
     val targetUserId: String,
     val role: String,
     val status: String,
+    @SerialName("p_workspace_id")
+    val workspaceId: String? = null,
+)
+
+@Serializable
+private data class CreateInviteCodePayload(
+    @SerialName("p_role")
+    val role: String,
+    @SerialName("p_workspace_id")
+    val workspaceId: String? = null,
+)
+
+@Serializable
+private data class RevokeInviteCodePayload(
+    @SerialName("p_invite_code")
+    val inviteCode: String,
+    @SerialName("p_workspace_id")
+    val workspaceId: String? = null,
+)
+
+@Serializable
+private data class ListInviteCodesPayload(
+    @SerialName("p_workspace_id")
+    val workspaceId: String? = null,
+)
+
+@Serializable
+private data class ListMembersPayload(
+    @SerialName("p_workspace_id")
+    val workspaceId: String? = null,
 )
 
 class EmployeesRepository(
@@ -34,23 +59,69 @@ class EmployeesRepository(
 
     suspend fun fetchEmployees(): List<Employee> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
+        val body = json.encodeToString(
+            ListMembersPayload(workspaceId = WorkspaceSelectionStore.selectedWorkspaceId),
+        )
         postRpcList(
             rpcName = "list_workspace_members",
-            body = "{}",
+            body = body,
         )
     }
 
-    suspend fun inviteEmployee(
-        email: String,
-        role: String,
-    ): EmployeeMutationResult = withContext(Dispatchers.IO) {
+    suspend fun createInviteCode(role: String): InviteCodeResult = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val payload = InviteEmployeePayload(email = email.trim(), role = role.trim())
-        postRpcMutation(
-            rpcName = "invite_workspace_member",
-            body = json.encodeToString(payload),
-            fallbackLabel = "Failed to invite employee",
+        val payload = CreateInviteCodePayload(
+            role = role.trim(),
+            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
         )
+        postInviteCodeMutation(
+            rpcName = "create_workspace_invite_code",
+            body = json.encodeToString(payload),
+            fallbackLabel = "Failed to create invite code",
+        )
+    }
+
+    suspend fun listInviteCodes(): List<WorkspaceInviteCode> = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/list_workspace_invite_codes"
+        val body = json.encodeToString(
+            ListInviteCodesPayload(workspaceId = WorkspaceSelectionStore.selectedWorkspaceId),
+        )
+        val first = postRaw(endpoint = endpoint, body = body)
+        val result = if (first.code == 401) postRaw(endpoint = endpoint, body = body, forceRefresh = true) else first
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to list invite codes (${result.code})"))
+        }
+        json.decodeFromString(result.body)
+    }
+
+    suspend fun revokeInviteCode(inviteCode: String): EmployeeMutationResult = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val payload = RevokeInviteCodePayload(
+            inviteCode = inviteCode.trim().uppercase(),
+            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
+        )
+        postEmployeeMutation(
+            rpcName = "revoke_workspace_invite_code",
+            body = json.encodeToString(payload),
+            fallbackLabel = "Failed to revoke invite code",
+        )
+    }
+
+    suspend fun acceptInviteCode(code: String): EmployeeMutationResult = withContext(Dispatchers.IO) {
+        SupabaseProvider.assertConfigured()
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/accept_workspace_invite"
+        val payload = mapOf("invite_token" to code.trim())
+        val first = postRaw(endpoint = endpoint, body = json.encodeToString(payload))
+        val result = if (first.code == 401) {
+            postRaw(endpoint = endpoint, body = json.encodeToString(payload), forceRefresh = true)
+        } else {
+            first
+        }
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to accept invite code (${result.code})"))
+        }
+        json.decodeFromString(result.body)
     }
 
     suspend fun updateEmployee(
@@ -63,8 +134,9 @@ class EmployeesRepository(
             targetUserId = targetUserId,
             role = role.trim(),
             status = status.trim(),
+            workspaceId = WorkspaceSelectionStore.selectedWorkspaceId,
         )
-        postRpcMutation(
+        postEmployeeMutation(
             rpcName = "update_workspace_member_role_status",
             body = json.encodeToString(payload),
             fallbackLabel = "Failed to update employee",
@@ -86,20 +158,18 @@ class EmployeesRepository(
         return handleListResponse(retry.code, retry.body, rpcName)
     }
 
-    private suspend fun postRpcMutation(
+    private suspend fun postEmployeeMutation(
         rpcName: String,
         body: String,
         fallbackLabel: String,
     ): EmployeeMutationResult {
         val endpoint = "${SupabaseProvider.restUrl}/rpc/$rpcName"
-        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
-        val first = executePost(endpoint, body, token)
+        val first = postRaw(endpoint, body)
         if (first.code != 401) {
-            return handleMutationResponse(first.code, first.body, fallbackLabel)
+            return handleEmployeeMutationResponse(first.code, first.body, fallbackLabel)
         }
-        val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
-        val retry = executePost(endpoint, body, refreshed)
-        return handleMutationResponse(retry.code, retry.body, fallbackLabel)
+        val retry = postRaw(endpoint, body, forceRefresh = true)
+        return handleEmployeeMutationResponse(retry.code, retry.body, fallbackLabel)
     }
 
     private fun handleListResponse(code: Int, rawBody: String, rpcName: String): List<Employee> {
@@ -109,7 +179,21 @@ class EmployeesRepository(
         return json.decodeFromString(rawBody)
     }
 
-    private fun handleMutationResponse(
+    private suspend fun postInviteCodeMutation(
+        rpcName: String,
+        body: String,
+        fallbackLabel: String,
+    ): InviteCodeResult {
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/$rpcName"
+        val first = postRaw(endpoint, body)
+        if (first.code != 401) {
+            return handleInviteCodeMutationResponse(first.code, first.body, fallbackLabel)
+        }
+        val retry = postRaw(endpoint, body, forceRefresh = true)
+        return handleInviteCodeMutationResponse(retry.code, retry.body, fallbackLabel)
+    }
+
+    private fun handleEmployeeMutationResponse(
         code: Int,
         rawBody: String,
         fallbackLabel: String,
@@ -118,6 +202,26 @@ class EmployeesRepository(
             throw IOException(parseSupabaseError(rawBody, "$fallbackLabel ($code)"))
         }
         return json.decodeFromString(rawBody)
+    }
+
+    private fun handleInviteCodeMutationResponse(
+        code: Int,
+        rawBody: String,
+        fallbackLabel: String,
+    ): InviteCodeResult {
+        if (code !in 200..299) {
+            throw IOException(parseSupabaseError(rawBody, "$fallbackLabel ($code)"))
+        }
+        return json.decodeFromString(rawBody)
+    }
+
+    private suspend fun postRaw(
+        endpoint: String,
+        body: String,
+        forceRefresh: Boolean = false,
+    ): HttpResult {
+        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = forceRefresh)
+        return executePost(endpoint, body, token)
     }
 
     private fun executePost(endpoint: String, rawPayload: String, accessToken: String): HttpResult {
@@ -162,5 +266,10 @@ private fun readBody(
 private fun parseSupabaseError(rawBody: String, fallback: String): String {
     if (rawBody.isBlank()) return fallback
     val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(rawBody)?.groupValues?.getOrNull(1)
-    return message ?: fallback
+    return when (message) {
+        "workspace_required" -> "Selecciona un workspace antes de continuar."
+        "workspace_forbidden" -> "No tienes permisos en el workspace seleccionado."
+        "cross_workspace_reference" -> "El recurso no pertenece al workspace activo."
+        else -> message ?: fallback
+    }
 }

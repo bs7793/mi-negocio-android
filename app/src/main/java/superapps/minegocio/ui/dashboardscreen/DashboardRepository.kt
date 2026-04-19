@@ -8,8 +8,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import superapps.minegocio.ui.auth.AuthSessionManager
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
@@ -20,15 +22,45 @@ class DashboardRepository(
     private val authSessionManager: AuthSessionManager = AuthSessionManager(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+    private var cachedWorkspaceId: String? = null
+    private var cachedWorkspaceForUserId: String? = null
 
     suspend fun fetchWarehouses(): List<DashboardWarehouse> = withContext(Dispatchers.IO) {
         SupabaseProvider.assertConfigured()
-        val endpoint = "${SupabaseProvider.restUrl}/warehouses?select=id,workspace_id,name&order=name.asc"
+        val workspaceId = primaryWorkspaceId()
+        val endpoint =
+            "${SupabaseProvider.restUrl}/warehouses" +
+                "?select=id,workspace_id,name" +
+                "&workspace_id=eq.${workspaceId.urlEncode()}" +
+                "&order=name.asc"
         val result = get(endpoint)
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to fetch warehouses (${result.code})"))
         }
         return@withContext json.decodeFromString(result.body)
+    }
+
+    private suspend fun primaryWorkspaceId(): String {
+        val uid = authSessionManager.currentUserIdOrNull()
+        val selectedWorkspaceId = WorkspaceSelectionStore.selectedWorkspaceId
+        if (!selectedWorkspaceId.isNullOrBlank()) {
+            cachedWorkspaceId = selectedWorkspaceId
+            cachedWorkspaceForUserId = uid
+            return selectedWorkspaceId
+        }
+        if (cachedWorkspaceId != null && uid != null && cachedWorkspaceForUserId == uid) {
+            return cachedWorkspaceId!!
+        }
+        val endpoint = "${SupabaseProvider.restUrl}/rpc/get_my_primary_workspace_id"
+        val result = post(endpoint, "{}")
+        if (result.code !in 200..299) {
+            throw IOException(parseSupabaseError(result.body, "Failed to resolve workspace (${result.code})"))
+        }
+        val id = result.body.trim().removePrefix("\"").removeSuffix("\"")
+        if (id.isBlank()) throw IOException("Workspace id response was empty")
+        cachedWorkspaceId = id
+        cachedWorkspaceForUserId = uid
+        return id
     }
 
     suspend fun fetchSaleDetail(saleId: Long): DashboardSaleDetail = withContext(Dispatchers.IO) {
@@ -187,6 +219,8 @@ private fun readBody(connection: HttpURLConnection, isSuccess: Boolean): String 
     if (stream == null) return ""
     return stream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
 }
+
+private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8.toString())
 
 @Serializable
 private data class GetIncomeStatementMonthlySummaryPayload(

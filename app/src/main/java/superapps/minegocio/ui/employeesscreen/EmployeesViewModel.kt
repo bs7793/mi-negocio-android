@@ -11,11 +11,15 @@ import kotlinx.coroutines.launch
 data class EmployeesUiState(
     val isLoading: Boolean = true,
     val employees: List<Employee> = emptyList(),
+    val inviteCodes: List<WorkspaceInviteCode> = emptyList(),
     val errorMessage: String? = null,
     val isInvitingEmployee: Boolean = false,
     val inviteErrorMessage: String? = null,
+    val latestInviteCode: InviteCodeResult? = null,
     val isUpdatingEmployee: Boolean = false,
     val updateErrorMessage: String? = null,
+    val isAcceptingInviteCode: Boolean = false,
+    val acceptInviteErrorMessage: String? = null,
 )
 
 class EmployeesViewModel(
@@ -33,10 +37,12 @@ class EmployeesViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val list = repository.fetchEmployees()
+                val codes = repository.listInviteCodes()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         employees = list,
+                        inviteCodes = codes,
                         errorMessage = null,
                     )
                 }
@@ -51,10 +57,9 @@ class EmployeesViewModel(
         }
     }
 
-    fun inviteEmployee(email: String, role: String) {
-        val normalizedEmail = email.trim().lowercase()
+    fun createInviteCode(role: String) {
         val normalizedRole = role.trim().lowercase()
-        if (normalizedEmail.isBlank() || normalizedRole.isBlank()) {
+        if (normalizedRole.isBlank()) {
             _uiState.update { it.copy(inviteErrorMessage = null) }
             return
         }
@@ -62,10 +67,7 @@ class EmployeesViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isInvitingEmployee = true, inviteErrorMessage = null) }
             try {
-                val result = repository.inviteEmployee(
-                    email = normalizedEmail,
-                    role = normalizedRole,
-                )
+                val result = repository.createInviteCode(role = normalizedRole)
                 if (!result.success) {
                     _uiState.update {
                         it.copy(
@@ -76,12 +78,13 @@ class EmployeesViewModel(
                     return@launch
                 }
 
-                val created = result.member
+                val codes = repository.listInviteCodes()
                 _uiState.update { state ->
                     state.copy(
                         isInvitingEmployee = false,
                         inviteErrorMessage = null,
-                        employees = if (created == null) state.employees else mergeEmployee(state.employees, created),
+                        latestInviteCode = result,
+                        inviteCodes = codes,
                     )
                 }
             } catch (e: Exception) {
@@ -89,6 +92,72 @@ class EmployeesViewModel(
                     it.copy(
                         isInvitingEmployee = false,
                         inviteErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun revokeInviteCode(inviteCode: String) {
+        if (inviteCode.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isInvitingEmployee = true, inviteErrorMessage = null) }
+            try {
+                val result = repository.revokeInviteCode(inviteCode)
+                if (!result.success) {
+                    _uiState.update {
+                        it.copy(
+                            isInvitingEmployee = false,
+                            inviteErrorMessage = result.message ?: "Could not revoke invite code",
+                        )
+                    }
+                    return@launch
+                }
+                val codes = repository.listInviteCodes()
+                _uiState.update {
+                    it.copy(
+                        isInvitingEmployee = false,
+                        inviteErrorMessage = null,
+                        inviteCodes = codes,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isInvitingEmployee = false,
+                        inviteErrorMessage = e.message ?: e.toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun acceptInviteCode(code: String, onAccepted: (() -> Unit)? = null) {
+        val trimmed = code.trim()
+        if (trimmed.isBlank()) {
+            _uiState.update { it.copy(acceptInviteErrorMessage = null) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAcceptingInviteCode = true, acceptInviteErrorMessage = null) }
+            try {
+                val result = repository.acceptInviteCode(trimmed)
+                if (!result.success) {
+                    _uiState.update {
+                        it.copy(
+                            isAcceptingInviteCode = false,
+                            acceptInviteErrorMessage = result.message ?: "Could not accept invite code",
+                        )
+                    }
+                    return@launch
+                }
+                _uiState.update { it.copy(isAcceptingInviteCode = false, acceptInviteErrorMessage = null) }
+                onAccepted?.invoke()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isAcceptingInviteCode = false,
+                        acceptInviteErrorMessage = e.message ?: e.toString(),
                     )
                 }
             }
@@ -139,6 +208,14 @@ class EmployeesViewModel(
 
     fun clearInviteError() {
         _uiState.update { it.copy(inviteErrorMessage = null) }
+    }
+
+    fun clearAcceptInviteError() {
+        _uiState.update { it.copy(acceptInviteErrorMessage = null) }
+    }
+
+    fun clearLatestInviteCode() {
+        _uiState.update { it.copy(latestInviteCode = null) }
     }
 
     fun clearUpdateError() {

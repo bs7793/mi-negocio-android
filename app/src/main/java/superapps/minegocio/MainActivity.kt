@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,8 +34,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -51,6 +56,8 @@ import superapps.minegocio.ui.productsscreen.ProductsScreen
 import superapps.minegocio.ui.reportsscreen.ReportsScreen
 import superapps.minegocio.ui.salesscreen.SalesScreen
 import superapps.minegocio.ui.warehousesscreen.WarehousesScreen
+import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
+import superapps.minegocio.ui.workspacesession.WorkspaceSessionViewModel
 import superapps.minegocio.ui.theme.MyApplicationTheme
 
 private fun appDestinationFromSavedName(name: String?): AppDestinations {
@@ -95,7 +102,9 @@ fun MyApplicationApp() {
     var savedDestinationName by rememberSaveable { mutableStateOf(AppDestinations.DASHBOARD.name) }
     val currentDestination = appDestinationFromSavedName(savedDestinationName)
     val authViewModel: AuthViewModel = viewModel()
+    val workspaceSessionViewModel: WorkspaceSessionViewModel = viewModel()
     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+    val workspaceSessionUiState by workspaceSessionViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val webClientId = context.getString(R.string.default_web_client_id)
     val hasValidWebClientId = webClientId.isNotBlank() && webClientId != "default_web_client_id"
@@ -130,6 +139,44 @@ fun MyApplicationApp() {
 
     LaunchedEffect(Unit) {
         authViewModel.bootstrapAnonymousSession()
+    }
+
+    LaunchedEffect(authUiState.uid) {
+        if (!authUiState.uid.isNullOrBlank()) {
+            workspaceSessionViewModel.refresh()
+        } else {
+            WorkspaceSelectionStore.selectedWorkspaceId = null
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, authUiState.uid) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && !authUiState.uid.isNullOrBlank()) {
+                workspaceSessionViewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    var lastWorkspaceId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(workspaceSessionUiState.selectedWorkspaceId) {
+        val selectedWorkspaceId = workspaceSessionUiState.selectedWorkspaceId
+        if (
+            !lastWorkspaceId.isNullOrBlank() &&
+            !selectedWorkspaceId.isNullOrBlank() &&
+            lastWorkspaceId != selectedWorkspaceId
+        ) {
+            Toast.makeText(
+                context,
+                "Workspace changed, reloading data",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+        lastWorkspaceId = selectedWorkspaceId
     }
 
     NavigationSuiteScaffold(
@@ -195,6 +242,19 @@ fun MyApplicationApp() {
                             onOpenEmployees = {
                                 navController.navigate(ProfileNavRoutes.EMPLOYEES)
                             },
+                            inviteCodeError = authUiState.errorMessage,
+                            isSubmittingInviteCode = authUiState.isLoading,
+                            workspaceName = workspaceSessionUiState.selectedWorkspaceName,
+                            workspaces = workspaceSessionUiState.workspaces,
+                            onSubmitInviteCode = { code ->
+                                authViewModel.acceptInviteCode(code) {
+                                    workspaceSessionViewModel.refresh()
+                                }
+                            },
+                            onSelectWorkspace = { workspaceId ->
+                                workspaceSessionViewModel.selectWorkspace(workspaceId)
+                            },
+                            onClearInviteCodeError = { authViewModel.clearError() },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }

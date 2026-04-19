@@ -32,6 +32,8 @@ data class ProductsListResponse(
 
 @Serializable
 data class CreateProductPayload(
+    @SerialName("workspace_id")
+    val workspaceId: String? = null,
     val name: String,
     val description: String? = null,
     @SerialName("image_url")
@@ -43,6 +45,8 @@ data class CreateProductPayload(
 
 @Serializable
 data class UpdateProductBasicPayload(
+    @SerialName("workspace_id")
+    val workspaceId: String? = null,
     @SerialName("product_id")
     val productId: Long,
     val name: String,

@@ -1,0 +1,2 @@
+[functions.generate-sale-receipt]
+verify_jwt = false

@@ -177,11 +177,20 @@ Deno.serve(async (request: Request) => {
   }
 
   const supabaseUrl = getEnv("SUPABASE_URL");
-  const anonKey = getEnv("SUPABASE_ANON_KEY");
+  const publishableOrAnonKey = getEnv("SB_PUBLISHABLE_KEY") ?? getEnv("SUPABASE_ANON_KEY");
   const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return response(500, { message: "Supabase environment variables are not configured" });
+  if (!supabaseUrl) {
+    return response(500, { message: "Missing required environment variable: SUPABASE_URL" });
+  }
+  if (!publishableOrAnonKey) {
+    return response(500, {
+      message:
+        "Missing required client key: set SB_PUBLISHABLE_KEY (preferred) or SUPABASE_ANON_KEY",
+    });
+  }
+  if (!serviceRoleKey) {
+    return response(500, { message: "Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY" });
   }
 
   const authorization = request.headers.get("Authorization") ??
@@ -210,7 +219,7 @@ Deno.serve(async (request: Request) => {
     return response(400, { message: "Invalid JSON body" });
   }
 
-  const userClient = createClient(supabaseUrl, anonKey, {
+  const userClient = createClient(supabaseUrl, publishableOrAnonKey, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,

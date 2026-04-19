@@ -5,14 +5,19 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.user.UserInfo
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.buildJsonObject
 import superapps.minegocio.ui.categoriesscreen.SupabaseProvider
 
 class AuthSessionManager(
     private val supabase: SupabaseClient = SupabaseProvider.client,
 ) {
+    private val sessionMutex = Mutex()
+
     fun observeAuthState(): Flow<SupabaseAuthUser?> = flow {
         emit(currentUserOrNull())
         supabase.auth.sessionStatus.collect {
@@ -21,8 +26,10 @@ class AuthSessionManager(
     }
 
     suspend fun ensureAnonymousSession() {
-        if (supabase.auth.currentSessionOrNull() == null) {
-            supabase.auth.signInAnonymously(data = buildJsonObject { })
+        sessionMutex.withLock {
+            if (supabase.auth.currentSessionOrNull() == null) {
+                supabase.auth.signInAnonymously(data = buildJsonObject { })
+            }
         }
     }
 
@@ -40,17 +47,36 @@ class AuthSessionManager(
     }
 
     suspend fun signOutAndRecreateAnonymous() {
-        supabase.auth.signOut()
-        ensureAnonymousSession()
+        sessionMutex.withLock {
+            supabase.auth.signOut()
+            if (supabase.auth.currentSessionOrNull() == null) {
+                supabase.auth.signInAnonymously(data = buildJsonObject { })
+            }
+        }
     }
 
     suspend fun getSupabaseAccessToken(forceRefresh: Boolean = false): String {
-        if (forceRefresh) {
-            supabase.auth.refreshCurrentSession()
-        }
-        val session = supabase.auth.currentSessionOrNull()
+        return getSupabaseAccessTokenOrNull(forceRefresh = forceRefresh)
             ?: throw IllegalStateException("No active Supabase session")
-        return session.accessToken
+    }
+
+    suspend fun getSupabaseAccessTokenOrNull(forceRefresh: Boolean = false): String? {
+        repeat(3) { attempt ->
+            val token = sessionMutex.withLock {
+                var session = supabase.auth.currentSessionOrNull()
+                if (session != null && forceRefresh && attempt == 0) {
+                    runCatching { supabase.auth.refreshCurrentSession() }
+                    session = supabase.auth.currentSessionOrNull()
+                }
+                session?.accessToken
+            }
+            if (!token.isNullOrBlank()) return token
+
+            if (attempt < 2) {
+                delay((attempt + 1) * 120L)
+            }
+        }
+        return null
     }
 
     fun currentUserIdOrNull(): String? = supabase.auth.currentUserOrNull()?.id

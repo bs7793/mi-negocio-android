@@ -87,18 +87,22 @@ class DashboardRepository(
     }
 
     private suspend fun get(endpoint: String): HttpResult {
-        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+        val token = authSessionManager.getSupabaseAccessTokenOrNull(forceRefresh = false)
+            ?: return HttpResult(401, """{"message":"No active Supabase session"}""")
         val first = execute(endpoint, "GET", token, null)
         if (first.code != 401) return first
-        val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+        val refreshed = authSessionManager.getSupabaseAccessTokenOrNull(forceRefresh = true)
+            ?: return HttpResult(401, """{"message":"No active Supabase session"}""")
         return execute(endpoint, "GET", refreshed, null)
     }
 
     private suspend fun post(endpoint: String, body: String): HttpResult {
-        val token = authSessionManager.getSupabaseAccessToken(forceRefresh = false)
+        val token = authSessionManager.getSupabaseAccessTokenOrNull(forceRefresh = false)
+            ?: return HttpResult(401, """{"message":"No active Supabase session"}""")
         val first = execute(endpoint, "POST", token, body)
         if (first.code != 401) return first
-        val refreshed = authSessionManager.getSupabaseAccessToken(forceRefresh = true)
+        val refreshed = authSessionManager.getSupabaseAccessTokenOrNull(forceRefresh = true)
+            ?: return HttpResult(401, """{"message":"No active Supabase session"}""")
         return execute(endpoint, "POST", refreshed, body)
     }
 

@@ -1,0 +1,5 @@
+[functions.generate-sale-receipt]
+verify_jwt = false
+
+[functions.receipt-share-redirect]
+verify_jwt = false

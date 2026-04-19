@@ -204,7 +204,9 @@ fun MyApplicationApp() {
     ) {
         when (currentDestination) {
             AppDestinations.DASHBOARD -> {
-                DashboardScreen()
+                DashboardScreen(
+                    onOpenProfile = { savedDestinationName = AppDestinations.PROFILE.name },
+                )
             }
             AppDestinations.SALES -> {
                 SalesScreen(

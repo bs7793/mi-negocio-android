@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -74,9 +75,13 @@ private const val ALL_WAREHOUSES_OPTION_ID: Long = -1L
 fun DashboardScreen(
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel(),
+    onOpenProfile: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val isWorkspaceRequired = remember(uiState.errorMessage) {
+        isWorkspaceRequiredErrorMessage(uiState.errorMessage)
+    }
     var warehouseMenuOpen by rememberSaveable { mutableStateOf(false) }
     val selectedWarehouseName = when (uiState.selectedWarehouseId) {
         ALL_WAREHOUSES_OPTION_ID -> stringResource(R.string.dashboard_all_warehouses_option)
@@ -149,138 +154,144 @@ fun DashboardScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                if (uiState.errorMessage != null) {
-                    item(key = "error_banner") {
-                        DashboardErrorBanner(message = uiState.errorMessage.orEmpty())
-                    }
-                }
-
-                item(key = "period_hero") {
-                    DashboardPeriodHeroCard(
-                        periodText = uiState.period.format(periodFormatter),
-                    )
-                }
-
-                item(key = "warehouse") {
-                    WarehouseExposedDropdown(
-                        selectedLabel = selectedWarehouseName,
-                        expanded = warehouseMenuOpen,
-                        onExpandedChange = { warehouseMenuOpen = it },
-                        onSelectAllWarehouses = {
-                            warehouseMenuOpen = false
-                            viewModel.selectWarehouse(ALL_WAREHOUSES_OPTION_ID)
-                        },
-                        warehouses = uiState.warehouses,
-                        onSelectWarehouse = { id ->
-                            warehouseMenuOpen = false
-                            viewModel.selectWarehouse(id)
-                        },
-                    )
-                }
-
-                if (uiState.isLoading) {
-                    item(key = "kpi_skeleton") {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            repeat(3) {
-                                DashboardKpiSkeletonCard()
-                            }
-                        }
+                if (isWorkspaceRequired) {
+                    item(key = "workspace_required") {
+                        DashboardWorkspaceRequiredCard(onOpenProfile = onOpenProfile)
                     }
                 } else {
-                    item(key = "kpis") {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                DashboardKpiCard(
-                                    title = stringResource(R.string.dashboard_income_label),
-                                    amount = uiState.summary.incomeTotal,
-                                    amountFormatter = amountFormatter,
-                                    icon = Icons.AutoMirrored.Outlined.TrendingUp,
-                                    emphasis = false,
-                                )
-                                DashboardKpiCard(
-                                    title = stringResource(R.string.dashboard_cost_label),
-                                    amount = uiState.summary.costTotal,
-                                    amountFormatter = amountFormatter,
-                                    icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                                    emphasis = false,
-                                )
-                                DashboardKpiCard(
-                                    title = stringResource(R.string.dashboard_profit_label),
-                                    amount = uiState.summary.profitTotal,
-                                    amountFormatter = amountFormatter,
-                                    icon = Icons.Outlined.EmojiEvents,
-                                    emphasis = true,
-                                )
-                            }
-                            if (uiState.isSummaryUpdating) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(40.dp),
-                                    strokeWidth = 3.dp,
-                                )
-                            }
+                    if (uiState.errorMessage != null) {
+                        item(key = "error_banner") {
+                            DashboardErrorBanner(message = uiState.errorMessage.orEmpty())
                         }
                     }
-                }
 
-                item(key = "sales_feed_header") {
-                    Text(
-                        text = stringResource(R.string.dashboard_sales_feed_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
-                    )
-                }
+                    item(key = "period_hero") {
+                        DashboardPeriodHeroCard(
+                            periodText = uiState.period.format(periodFormatter),
+                        )
+                    }
 
-                if (uiState.isLoading) {
-                    item(key = "sales_feed_skeleton") {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            repeat(4) {
-                                DashboardSalesFeedSkeletonRow()
-                            }
-                        }
+                    item(key = "warehouse") {
+                        WarehouseExposedDropdown(
+                            selectedLabel = selectedWarehouseName,
+                            expanded = warehouseMenuOpen,
+                            onExpandedChange = { warehouseMenuOpen = it },
+                            onSelectAllWarehouses = {
+                                warehouseMenuOpen = false
+                                viewModel.selectWarehouse(ALL_WAREHOUSES_OPTION_ID)
+                            },
+                            warehouses = uiState.warehouses,
+                            onSelectWarehouse = { id ->
+                                warehouseMenuOpen = false
+                                viewModel.selectWarehouse(id)
+                            },
+                        )
                     }
-                } else {
-                    uiState.feedErrorMessage?.let { message ->
-                        item(key = "sales_feed_error") {
-                            DashboardFeedErrorBanner(message = message)
-                        }
-                    }
-                    if (uiState.salesFeed.isEmpty()) {
-                        if (uiState.feedErrorMessage == null) {
-                            item(key = "sales_feed_empty") {
-                                Text(
-                                    text = stringResource(R.string.dashboard_sales_feed_empty),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                )
+
+                    if (uiState.isLoading) {
+                        item(key = "kpi_skeleton") {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                repeat(3) {
+                                    DashboardKpiSkeletonCard()
+                                }
                             }
                         }
                     } else {
-                        items(
-                            items = uiState.salesFeed,
-                            key = { it.saleId },
-                        ) { sale ->
-                            DashboardSalesFeedRow(
-                                item = sale,
-                                amountFormatter = amountFormatter,
-                                locale = locale,
-                                onClick = { viewModel.openSaleDetail(sale.saleId) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
-                            )
+                        item(key = "kpis") {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    DashboardKpiCard(
+                                        title = stringResource(R.string.dashboard_income_label),
+                                        amount = uiState.summary.incomeTotal,
+                                        amountFormatter = amountFormatter,
+                                        icon = Icons.AutoMirrored.Outlined.TrendingUp,
+                                        emphasis = false,
+                                    )
+                                    DashboardKpiCard(
+                                        title = stringResource(R.string.dashboard_cost_label),
+                                        amount = uiState.summary.costTotal,
+                                        amountFormatter = amountFormatter,
+                                        icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                                        emphasis = false,
+                                    )
+                                    DashboardKpiCard(
+                                        title = stringResource(R.string.dashboard_profit_label),
+                                        amount = uiState.summary.profitTotal,
+                                        amountFormatter = amountFormatter,
+                                        icon = Icons.Outlined.EmojiEvents,
+                                        emphasis = true,
+                                    )
+                                }
+                                if (uiState.isSummaryUpdating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(40.dp),
+                                        strokeWidth = 3.dp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "sales_feed_header") {
+                        Text(
+                            text = stringResource(R.string.dashboard_sales_feed_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                        )
+                    }
+
+                    if (uiState.isLoading) {
+                        item(key = "sales_feed_skeleton") {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                repeat(4) {
+                                    DashboardSalesFeedSkeletonRow()
+                                }
+                            }
+                        }
+                    } else {
+                        uiState.feedErrorMessage?.let { message ->
+                            item(key = "sales_feed_error") {
+                                DashboardFeedErrorBanner(message = message)
+                            }
+                        }
+                        if (uiState.salesFeed.isEmpty()) {
+                            if (uiState.feedErrorMessage == null) {
+                                item(key = "sales_feed_empty") {
+                                    Text(
+                                        text = stringResource(R.string.dashboard_sales_feed_empty),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                items = uiState.salesFeed,
+                                key = { it.saleId },
+                            ) { sale ->
+                                DashboardSalesFeedRow(
+                                    item = sale,
+                                    amountFormatter = amountFormatter,
+                                    locale = locale,
+                                    onClick = { viewModel.openSaleDetail(sale.saleId) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .alpha(if (uiState.isSummaryUpdating) 0.55f else 1f),
+                                )
+                            }
                         }
                     }
                 }
@@ -300,6 +311,41 @@ fun DashboardScreen(
                 amountFormatter = amountFormatter,
                 locale = locale,
             )
+        }
+}
+}
+
+@Composable
+private fun DashboardWorkspaceRequiredCard(onOpenProfile: () -> Unit) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.dashboard_workspace_required_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.dashboard_workspace_required_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Button(onClick = onOpenProfile) {
+                Text(text = stringResource(R.string.dashboard_workspace_required_action))
+            }
         }
     }
 }
@@ -677,6 +723,21 @@ private fun formatSoldAtForDisplay(soldAt: String, locale: Locale): String {
     } catch (_: Exception) {
         soldAt
     }
+}
+
+private fun isWorkspaceRequiredErrorMessage(errorMessage: String?): Boolean {
+    if (errorMessage.isNullOrBlank()) return false
+    val normalized = errorMessage.trim().lowercase(Locale.ROOT)
+    if (normalized.contains("selecciona un workspace antes de continuar")) return true
+    if (normalized.contains("workspace_required")) return true
+    if (!normalized.contains("workspace")) return false
+    return normalized.contains("required") ||
+        normalized.contains("requerido") ||
+        normalized.contains("select") ||
+        normalized.contains("selecciona") ||
+        normalized.contains("missing") ||
+        normalized.contains("not selected") ||
+        normalized.contains("antes de continuar")
 }
 
 @Composable

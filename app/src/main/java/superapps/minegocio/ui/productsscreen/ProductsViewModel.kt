@@ -2,7 +2,7 @@ package superapps.minegocio.ui.productsscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,41 +70,46 @@ class ProductsViewModel(
     fun loadInitial() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                val categoriesDeferred = async { repository.fetchCategories() }
-                val warehousesDeferred = async { repository.fetchWarehouses() }
-                val optionCatalogDeferred = async { repository.fetchProductOptionsCatalog() }
-                val productsDeferred = async {
-                    repository.fetchProducts(
-                        search = _uiState.value.searchQuery,
-                        categoryId = _uiState.value.selectedCategoryId,
-                        warehouseId = _uiState.value.selectedWarehouseId,
-                    )
-                }
-                val categories = categoriesDeferred.await()
-                val warehouses = warehousesDeferred.await()
-                val optionCatalog = optionCatalogDeferred.await()
-                val products = productsDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        categories = categories,
-                        warehouses = warehouses,
-                        optionTypesCatalog = optionCatalog.optionTypes,
-                        products = products.items,
-                        total = products.total,
-                        errorMessage = null,
-                        activeWorkspaceId = activeWorkspaceId,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
+            runCatching {
+                val categories = repository.fetchCategories()
+                val warehouses = repository.fetchWarehouses()
+                val optionCatalog = repository.fetchProductOptionsCatalog()
+                val products = repository.fetchProducts(
+                    search = _uiState.value.searchQuery,
+                    categoryId = _uiState.value.selectedCategoryId,
+                    warehouseId = _uiState.value.selectedWarehouseId,
+                )
+                InitialProductsPayload(
+                    categories = categories,
+                    warehouses = warehouses,
+                    optionTypes = optionCatalog.optionTypes,
+                    products = products.items,
+                    total = products.total,
+                )
             }
+                .onSuccess { payload ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            categories = payload.categories,
+                            warehouses = payload.warehouses,
+                            optionTypesCatalog = payload.optionTypes,
+                            products = payload.products,
+                            total = payload.total,
+                            errorMessage = null,
+                            activeWorkspaceId = activeWorkspaceId,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -246,4 +251,12 @@ class ProductsViewModel(
         _uiState.update { it.copy(updateWarningMessage = null) }
     }
 }
+
+private data class InitialProductsPayload(
+    val categories: List<Category>,
+    val warehouses: List<Warehouse>,
+    val optionTypes: List<ProductOptionTypeCatalog>,
+    val products: List<Product>,
+    val total: Int,
+)
 

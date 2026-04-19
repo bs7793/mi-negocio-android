@@ -152,4 +152,7 @@
     <string name="dashboard_sale_status_completed">Completada</string>
     <string name="dashboard_sale_status_voided">Anulada</string>
     <string name="dashboard_sale_detail_line_image_a11y">Imagen del producto %1$s</string>
+    <string name="dashboard_workspace_required_title">Configura tu workspace</string>
+    <string name="dashboard_workspace_required_subtitle">Crea o únete a un workspace en Perfil para activar tu dashboard.</string>
+    <string name="dashboard_workspace_required_action">Ir a perfil</string>
 </resources>

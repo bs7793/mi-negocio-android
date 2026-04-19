@@ -152,4 +152,7 @@
     <string name="dashboard_sale_status_completed">Concluída</string>
     <string name="dashboard_sale_status_voided">Cancelada</string>
     <string name="dashboard_sale_detail_line_image_a11y">Imagem do produto %1$s</string>
+    <string name="dashboard_workspace_required_title">Configure seu workspace</string>
+    <string name="dashboard_workspace_required_subtitle">Crie ou entre em um workspace no Perfil para liberar seu dashboard.</string>
+    <string name="dashboard_workspace_required_action">Abrir perfil</string>
 </resources>

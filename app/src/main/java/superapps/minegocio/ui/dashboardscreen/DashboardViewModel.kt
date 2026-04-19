@@ -2,9 +2,8 @@ package superapps.minegocio.ui.dashboardscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import superapps.minegocio.ui.SalesSummaryInvalidationBus
 import superapps.minegocio.ui.WorkspaceScopeInvalidationBus
 import superapps.minegocio.ui.workspacesession.WorkspaceSelectionStore
@@ -85,44 +85,48 @@ class DashboardViewModel(
                     feedErrorMessage = null,
                 )
             }
-            val warehousesDeferred = async { repository.fetchWarehouses() }
-            val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone) }
-            val feedDeferred = async { runCatching { repository.fetchSalesFeed(warehouseId = null, zoneId = clock.zone) } }
-            try {
-                val warehouses = warehousesDeferred.await()
-                val summary = summaryDeferred.await()
-                val feedResult = feedDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isSummaryUpdating = false,
-                        isRefreshing = false,
-                        warehouses = warehouses,
-                        selectedWarehouseId = ALL_WAREHOUSES_OPTION_ID,
-                        summary = summary,
-                        salesFeed = feedResult.getOrElse { emptyList() },
-                        feedErrorMessage = feedResult.exceptionOrNull()?.let { e ->
-                            e.message ?: e.toString()
-                        },
-                        period = YearMonth.now(clock),
-                        errorMessage = null,
-                    )
+            supervisorScope {
+                val feedDeferred = async {
+                    runCatching {
+                        repository.fetchSalesFeed(warehouseId = null, zoneId = clock.zone)
+                    }
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                val feedResult = feedDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isSummaryUpdating = false,
-                        isRefreshing = false,
-                        errorMessage = e.message ?: e.toString(),
-                        salesFeed = feedResult.getOrElse { emptyList() },
-                        feedErrorMessage = feedResult.exceptionOrNull()?.let { err ->
-                            err.message ?: err.toString()
-                        },
-                    )
+                val primaryResult = runCatching {
+                    val warehouses = repository.fetchWarehouses()
+                    val summary = repository.fetchMonthlySummary(warehouseId = null, zoneId = clock.zone)
+                    warehouses to summary
                 }
+                val feedResult = feedDeferred.await()
+                primaryResult
+                    .onSuccess { (warehouses, summary) ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isSummaryUpdating = false,
+                                isRefreshing = false,
+                                warehouses = warehouses,
+                                selectedWarehouseId = ALL_WAREHOUSES_OPTION_ID,
+                                summary = summary,
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                                period = YearMonth.now(clock),
+                                errorMessage = null,
+                            )
+                        }
+                    }
+                    .onFailure { throwable ->
+                        if (throwable is CancellationException) throw throwable
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isSummaryUpdating = false,
+                                isRefreshing = false,
+                                errorMessage = throwable.asUiMessage(),
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                            )
+                        }
+                    }
             }
         }
     }
@@ -150,37 +154,41 @@ class DashboardViewModel(
         refreshingWarehouseFilter = warehouseFilter
         _uiState.update { it.copy(isRefreshing = true) }
         try {
-            coroutineScope {
-                val summaryDeferred = async { repository.fetchMonthlySummary(warehouseId = warehouseFilter, zoneId = clock.zone) }
-                val feedDeferred = async { runCatching { repository.fetchSalesFeed(warehouseId = warehouseFilter, zoneId = clock.zone) } }
-                try {
-                    val summary = summaryDeferred.await()
-                    val feedResult = feedDeferred.await()
-                    if (requestId != latestRefreshRequestId) return@coroutineScope
-                    _uiState.update {
-                        it.copy(
-                            isRefreshing = false,
-                            summary = summary,
-                            salesFeed = feedResult.getOrElse { emptyList() },
-                            feedErrorMessage = feedResult.exceptionOrNull()?.let { e -> e.message ?: e.toString() },
-                            period = YearMonth.now(clock),
-                            errorMessage = null,
-                        )
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (e: Exception) {
-                    if (requestId != latestRefreshRequestId) return@coroutineScope
-                    val feedResult = feedDeferred.await()
-                    _uiState.update {
-                        it.copy(
-                            isRefreshing = false,
-                            errorMessage = e.message ?: e.toString(),
-                            salesFeed = feedResult.getOrElse { emptyList() },
-                            feedErrorMessage = feedResult.exceptionOrNull()?.let { err -> err.message ?: err.toString() },
-                        )
+            supervisorScope {
+                val feedDeferred = async {
+                    runCatching {
+                        repository.fetchSalesFeed(warehouseId = warehouseFilter, zoneId = clock.zone)
                     }
                 }
+                val summaryResult = runCatching {
+                    repository.fetchMonthlySummary(warehouseId = warehouseFilter, zoneId = clock.zone)
+                }
+                val feedResult = feedDeferred.await()
+                if (requestId != latestRefreshRequestId) return@supervisorScope
+                summaryResult
+                    .onSuccess { summary ->
+                        _uiState.update {
+                            it.copy(
+                                isRefreshing = false,
+                                summary = summary,
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                                period = YearMonth.now(clock),
+                                errorMessage = null,
+                            )
+                        }
+                    }
+                    .onFailure { throwable ->
+                        if (throwable is CancellationException) throw throwable
+                        _uiState.update {
+                            it.copy(
+                                isRefreshing = false,
+                                errorMessage = throwable.asUiMessage(),
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                            )
+                        }
+                    }
             }
         } finally {
             if (requestId == latestRefreshRequestId) {
@@ -208,49 +216,50 @@ class DashboardViewModel(
                     feedErrorMessage = null,
                 )
             }
-            val summaryDeferred = async {
-                repository.fetchMonthlySummary(
-                    warehouseId = warehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID },
-                    zoneId = clock.zone,
-                )
-            }
-            val feedDeferred = async {
-                runCatching {
-                    repository.fetchSalesFeed(
-                        warehouseId = warehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID },
+            supervisorScope {
+                val warehouseFilter = warehouseId.takeUnless { it == ALL_WAREHOUSES_OPTION_ID }
+                val feedDeferred = async {
+                    runCatching {
+                        repository.fetchSalesFeed(
+                            warehouseId = warehouseFilter,
+                            zoneId = clock.zone,
+                        )
+                    }
+                }
+                val summaryResult = runCatching {
+                    repository.fetchMonthlySummary(
+                        warehouseId = warehouseFilter,
                         zoneId = clock.zone,
                     )
                 }
-            }
-            try {
-                val summary = summaryDeferred.await()
                 val feedResult = feedDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isSummaryUpdating = false,
-                        isLoading = false,
-                        isRefreshing = false,
-                        summary = summary,
-                        salesFeed = feedResult.getOrElse { emptyList() },
-                        feedErrorMessage = feedResult.exceptionOrNull()?.let { e -> e.message ?: e.toString() },
-                        period = YearMonth.now(clock),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                val feedResult = feedDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isSummaryUpdating = false,
-                        isLoading = false,
-                        isRefreshing = false,
-                        errorMessage = e.message ?: e.toString(),
-                        salesFeed = feedResult.getOrElse { emptyList() },
-                        feedErrorMessage = feedResult.exceptionOrNull()?.let { err ->
-                            err.message ?: err.toString()
-                        },
-                    )
-                }
+                summaryResult
+                    .onSuccess { summary ->
+                        _uiState.update {
+                            it.copy(
+                                isSummaryUpdating = false,
+                                isLoading = false,
+                                isRefreshing = false,
+                                summary = summary,
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                                period = YearMonth.now(clock),
+                            )
+                        }
+                    }
+                    .onFailure { throwable ->
+                        if (throwable is CancellationException) throw throwable
+                        _uiState.update {
+                            it.copy(
+                                isSummaryUpdating = false,
+                                isLoading = false,
+                                isRefreshing = false,
+                                errorMessage = throwable.asUiMessage(),
+                                salesFeed = feedResult.getOrElse { emptyList() },
+                                feedErrorMessage = feedResult.exceptionOrNull()?.asUiMessage(),
+                            )
+                        }
+                    }
             }
         }
     }
@@ -363,3 +372,5 @@ class DashboardViewModel(
         _uiState.update { it.copy(receiptShareUrl = null) }
     }
 }
+
+private fun Throwable.asUiMessage(): String = message ?: toString()

@@ -2,7 +2,7 @@ package superapps.minegocio.ui.reportsscreen.dailycashclosure
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,35 +50,43 @@ class DailyCashClosureViewModel(
     fun loadInitial() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                val warehousesDeferred = async { repository.fetchWarehouses() }
-                val warehouses = warehousesDeferred.await()
+            runCatching {
+                val warehouses = repository.fetchWarehouses()
                 val selectedWarehouseId = warehouses.firstOrNull()?.id
                 val summary = repository.fetchDailySummary(
                     warehouseId = selectedWarehouseId,
                     zoneId = clock.zone,
                 )
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        warehouses = warehouses,
-                        selectedWarehouseId = selectedWarehouseId,
-                        summary = summary,
-                        reportDate = LocalDate.now(clock),
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        warehouses = emptyList(),
-                        selectedWarehouseId = null,
-                        summary = DailyCashClosureSummary(),
-                        reportDate = LocalDate.now(clock),
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
+                DailyCashClosureInitialPayload(
+                    warehouses = warehouses,
+                    selectedWarehouseId = selectedWarehouseId,
+                    summary = summary,
+                )
             }
+                .onSuccess { payload ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            warehouses = payload.warehouses,
+                            selectedWarehouseId = payload.selectedWarehouseId,
+                            summary = payload.summary,
+                            reportDate = LocalDate.now(clock),
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            warehouses = emptyList(),
+                            selectedWarehouseId = null,
+                            summary = DailyCashClosureSummary(),
+                            reportDate = LocalDate.now(clock),
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -91,29 +99,39 @@ class DailyCashClosureViewModel(
                     errorMessage = null,
                 )
             }
-            try {
-                val summary = repository.fetchDailySummary(
+            runCatching {
+                repository.fetchDailySummary(
                     warehouseId = warehouseId,
                     zoneId = clock.zone,
                 )
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        summary = summary,
-                        reportDate = LocalDate.now(clock),
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        selectedWarehouseId = null,
-                        summary = DailyCashClosureSummary(),
-                        reportDate = LocalDate.now(clock),
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
             }
+                .onSuccess { summary ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            summary = summary,
+                            reportDate = LocalDate.now(clock),
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            selectedWarehouseId = null,
+                            summary = DailyCashClosureSummary(),
+                            reportDate = LocalDate.now(clock),
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 }
+
+private data class DailyCashClosureInitialPayload(
+    val warehouses: List<DailyCashClosureWarehouse>,
+    val selectedWarehouseId: Long?,
+    val summary: DailyCashClosureSummary,
+)

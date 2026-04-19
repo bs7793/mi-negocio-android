@@ -2,7 +2,7 @@ package superapps.minegocio.ui.salesscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -73,35 +73,40 @@ class SalesViewModel(
     fun loadInitial() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-            try {
-                val warehousesDeferred = async { repository.fetchWarehouses() }
-                val warehouses = warehousesDeferred.await()
+            runCatching {
+                val warehouses = repository.fetchWarehouses()
                 val selectedWarehouseId = warehouses.firstOrNull()?.id
-                val variantsDeferred = async {
-                    repository.fetchSellableVariants(
-                        search = null,
-                        warehouseId = selectedWarehouseId,
-                    )
-                }
-                val variants = variantsDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        warehouses = warehouses,
-                        selectedWarehouseId = selectedWarehouseId,
-                        variants = variants.items,
-                        paymentDraft = it.paymentDraft.copy(amountInput = formatAmount(it.cartTotal)),
-                        activeWorkspaceId = activeWorkspaceId,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
+                val variants = repository.fetchSellableVariants(
+                    search = null,
+                    warehouseId = selectedWarehouseId,
+                )
+                SalesInitialPayload(
+                    warehouses = warehouses,
+                    selectedWarehouseId = selectedWarehouseId,
+                    variants = variants.items,
+                )
             }
+                .onSuccess { payload ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            warehouses = payload.warehouses,
+                            selectedWarehouseId = payload.selectedWarehouseId,
+                            variants = payload.variants,
+                            paymentDraft = it.paymentDraft.copy(amountInput = formatAmount(it.cartTotal)),
+                            activeWorkspaceId = activeWorkspaceId,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -157,28 +162,29 @@ class SalesViewModel(
                     successMessage = null,
                 )
             }
-            try {
-                val variantsDeferred = async {
-                    repository.fetchSellableVariants(
-                        search = _uiState.value.searchQuery,
-                        warehouseId = warehouseId,
-                    )
-                }
-                val variants = variantsDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        variants = variants.items,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
+            runCatching {
+                repository.fetchSellableVariants(
+                    search = _uiState.value.searchQuery,
+                    warehouseId = warehouseId,
+                )
             }
+                .onSuccess { variants ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            variants = variants.items,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -193,25 +199,29 @@ class SalesViewModel(
                     successMessage = null,
                 )
             }
-            try {
-                val variants = repository.fetchSellableVariants(
+            runCatching {
+                repository.fetchSellableVariants(
                     search = _uiState.value.searchQuery,
                     warehouseId = warehouseId,
                 )
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        variants = variants.items,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
             }
+                .onSuccess { variants ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            variants = variants.items,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -227,25 +237,29 @@ class SalesViewModel(
                     successMessage = null,
                 )
             }
-            try {
-                val variants = repository.fetchSellableVariants(
+            runCatching {
+                repository.fetchSellableVariants(
                     search = null,
                     warehouseId = warehouseId,
                 )
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        variants = variants.items,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: e.toString(),
-                    )
-                }
             }
+                .onSuccess { variants ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            variants = variants.items,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = throwable.message ?: throwable.toString(),
+                        )
+                    }
+                }
         }
     }
 
@@ -371,13 +385,10 @@ class SalesViewModel(
                     ),
                 )
 
-                val variantsDeferred = async {
-                    repository.fetchSellableVariants(
-                        search = state.searchQuery,
-                        warehouseId = warehouseId,
-                    )
-                }
-                val refreshedVariants = variantsDeferred.await()
+                val refreshedVariants = repository.fetchSellableVariants(
+                    search = state.searchQuery,
+                    warehouseId = warehouseId,
+                )
 
                 _uiState.update {
                     it.copy(
@@ -436,3 +447,9 @@ class SalesViewModel(
         return String.format("%.2f", value)
     }
 }
+
+private data class SalesInitialPayload(
+    val warehouses: List<Warehouse>,
+    val selectedWarehouseId: Long?,
+    val variants: List<SellableVariant>,
+)

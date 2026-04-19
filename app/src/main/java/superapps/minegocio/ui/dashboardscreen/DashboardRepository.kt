@@ -94,8 +94,8 @@ class DashboardRepository(
         if (result.code !in 200..299) {
             throw IOException(parseSupabaseError(result.body, "Failed to generate sale receipt (${result.code})"))
         }
-        val payload = runCatching { json.decodeFromString<CreateSaleReceiptResponse>(result.body) }.getOrNull()
-        val receiptUrl = payload?.receiptUrl ?: payload?.url
+        val payload = runCatching { json.decodeFromString<DashboardReceiptSharePayload>(result.body) }.getOrNull()
+        val receiptUrl = payload?.shareUrl ?: payload?.receiptUrl ?: payload?.legacyUrl
         if (receiptUrl.isNullOrBlank()) {
             throw IOException("Receipt generated but no share URL was returned")
         }
@@ -222,10 +222,3 @@ private data class CreateSaleReceiptRequest(
     val saleId: Long,
 )
 
-@Serializable
-private data class CreateSaleReceiptResponse(
-    @SerialName("receipt_url")
-    val receiptUrl: String? = null,
-    @SerialName("url")
-    val url: String? = null,
-)

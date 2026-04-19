@@ -1,0 +1,7 @@
+{
+  "share_url": "https://project-ref.functions.supabase.co/functions/v1/receipt-share-redirect/abc123def4567890",
+  "share_expires_at": "2026-06-18T12:30:00Z",
+  "receipt_url": "https://project-ref.supabase.co/storage/v1/object/sign/sale-receipts/workspace-id/sale-42/receipt-20260419000101.pdf?token=abc",
+  "path": "workspace-id/sale-42/receipt-20260419000101.pdf",
+  "expires_in_seconds": 1800
+}

@@ -91,4 +91,28 @@ class DashboardContractsTest {
         assertEquals(0, detail.lines.size)
         assertEquals(0, detail.payments.size)
     }
+
+    @Test
+    fun `decode create sale receipt happy fixture`() {
+        val payload = ContractFixtureLoader.decode<DashboardReceiptSharePayload>(
+            "contracts/dashboardscreen/create_sale_receipt_response_fixture.json",
+        )
+        assertEquals(
+            "https://project-ref.functions.supabase.co/functions/v1/receipt-share-redirect/abc123def4567890",
+            payload.shareUrl,
+        )
+        assertEquals("2026-06-18T12:30:00Z", payload.shareExpiresAt)
+    }
+
+    @Test
+    fun `decode create sale receipt edge fixture`() {
+        val payload = ContractFixtureLoader.decode<DashboardReceiptSharePayload>(
+            "contracts/dashboardscreen/create_sale_receipt_response_edge_fixture.json",
+        )
+        assertEquals(null, payload.shareUrl)
+        assertEquals(
+            "https://project-ref.supabase.co/storage/v1/object/sign/sale-receipts/workspace-id/sale-99/receipt-20260419000102.pdf?token=fallback-only",
+            payload.receiptUrl,
+        )
+    }
 }

@@ -83,3 +83,15 @@ data class DashboardSaleDetailPayment(
     @SerialName("reference_text")
     val referenceText: String? = null,
 )
+
+@Serializable
+data class DashboardReceiptSharePayload(
+    @SerialName("share_url")
+    val shareUrl: String? = null,
+    @SerialName("share_expires_at")
+    val shareExpiresAt: String? = null,
+    @SerialName("receipt_url")
+    val receiptUrl: String? = null,
+    @SerialName("url")
+    val legacyUrl: String? = null,
+)

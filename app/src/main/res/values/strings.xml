@@ -237,6 +237,7 @@
     <string name="dashboard_receipt_error_title">Receipt generation failed</string>
     <string name="dashboard_receipt_error_text">We could not generate the receipt right now. Please try again.</string>
     <string name="dashboard_receipt_share_chooser_title">Share receipt</string>
+    <string name="dashboard_receipt_share_message_template">Receipt ready:\n%1$s</string>
     <string name="dashboard_receipt_open_action">Open receipt</string>
     <string name="dashboard_receipt_dismiss">Dismiss</string>
     <string name="dashboard_receipt_retry">Retry</string>

@@ -10,6 +10,7 @@ const CORS_HEADERS = {
 
 const RECEIPT_BUCKET = "sale-receipts";
 const SIGNED_URL_EXPIRATION_SECONDS = 30 * 60;
+const SHARE_LINK_EXPIRATION_DAYS = 60;
 const MAX_RECEIPT_LINES = 10;
 
 type SaleLine = {
@@ -88,6 +89,9 @@ const getEnv = (name: string): string | null => {
   const value = Deno.env.get(name)?.trim();
   return value && value.length > 0 ? value : null;
 };
+
+const generateShareId = (): string =>
+  crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 
 const createReceiptPdf = async (detail: SaleDetail): Promise<Uint8Array> => {
   const pdfDoc = await PDFDocument.create();
@@ -295,7 +299,38 @@ Deno.serve(async (request: Request) => {
     return response(500, { message: "Failed to generate signed URL" });
   }
 
+  const shareExpiresAt = new Date(Date.now() + SHARE_LINK_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
+  let shareId: string | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = generateShareId();
+    const { error: shareInsertError } = await adminClient
+      .from("sale_receipt_shares")
+      .insert({
+        share_id: candidate,
+        workspace_id: workspaceId,
+        storage_path: path,
+        created_by: userData.user.id,
+        status: "active",
+        expires_at: shareExpiresAt.toISOString(),
+      });
+
+    if (!shareInsertError) {
+      shareId = candidate;
+      break;
+    }
+  }
+
+  if (!shareId) {
+    return response(500, { message: "Failed to create receipt share link" });
+  }
+
+  const requestUrl = new URL(request.url);
+  const shareUrl = `${requestUrl.origin}/functions/v1/receipt-share-redirect/${shareId}`;
+
   return response(200, {
+    share_url: shareUrl,
+    share_expires_at: shareExpiresAt.toISOString(),
     receipt_url: signedData.signedUrl,
     path,
     expires_in_seconds: SIGNED_URL_EXPIRATION_SECONDS,

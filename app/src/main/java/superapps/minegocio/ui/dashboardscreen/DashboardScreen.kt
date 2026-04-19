@@ -95,15 +95,17 @@ fun DashboardScreen(
         }
     }
     val shareReceiptChooserTitle = stringResource(R.string.dashboard_receipt_share_chooser_title)
+    val shareReceiptMessageTemplate = stringResource(R.string.dashboard_receipt_share_message_template)
 
     LaunchedEffect(uiState.receiptShareUrl) {
         val receiptUrl = uiState.receiptShareUrl ?: return@LaunchedEffect
+        val shareMessage = shareReceiptMessageTemplate.format(receiptUrl)
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, receiptUrl)
+            putExtra(Intent.EXTRA_TEXT, shareMessage)
         }
         val openIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(Uri.parse(receiptUrl), "application/pdf")
+            data = Uri.parse(receiptUrl)
             addCategory(Intent.CATEGORY_BROWSABLE)
         }
         val chooser = Intent.createChooser(sendIntent, shareReceiptChooserTitle).apply {

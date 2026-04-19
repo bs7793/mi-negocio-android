@@ -1,0 +1,2 @@
+[functions.receipt-share-redirect]
+verify_jwt = false
